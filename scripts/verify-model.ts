@@ -20,17 +20,31 @@ interface ChatResult {
   body: unknown;
 }
 
+// The :free endpoint sheds load intermittently — single requests get through
+// while bursts 429. Space retries 60s apart (verification-script-only policy;
+// the app itself never auto-retries 429s, per spec §3.1).
+const RETRY_DELAY_MS = 60_000;
+const MAX_ATTEMPTS = 6;
+
 async function chat(payload: Record<string, unknown>): Promise<ChatResult> {
-  const res = await fetch(`${BASE}/chat/completions`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ model: MODEL, max_tokens: 256, ...payload }),
-  });
-  const body: unknown = await res.json().catch(() => null);
-  return { status: res.status, body };
+  for (let attempt = 1; ; attempt++) {
+    const res = await fetch(`${BASE}/chat/completions`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ model: MODEL, max_tokens: 256, ...payload }),
+    });
+    const body: unknown = await res.json().catch(() => null);
+    if (res.status !== 429 || attempt >= MAX_ATTEMPTS) {
+      return { status: res.status, body };
+    }
+    console.log(
+      `   (429 upstream, attempt ${attempt}/${MAX_ATTEMPTS} — waiting ${RETRY_DELAY_MS / 1000}s)`,
+    );
+    await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));
+  }
 }
 
 function extractMessage(body: unknown): {
@@ -44,9 +58,15 @@ function extractMessage(body: unknown): {
       message?: { content?: string; tool_calls?: unknown[] };
       finish_reason?: string;
     }[];
-    error?: { message?: string };
+    error?: { message?: string; metadata?: { raw?: string; provider_name?: string } };
   } | null;
-  if (b?.error) return { error: b.error.message ?? JSON.stringify(b.error) };
+  if (b?.error) {
+    const meta = b.error.metadata;
+    const detail = meta?.raw
+      ? ` [${meta.provider_name ?? "unknown provider"}: ${meta.raw}]`
+      : "";
+    return { error: `${b.error.message ?? JSON.stringify(b.error)}${detail}` };
+  }
   const choice = b?.choices?.[0];
   return {
     content: choice?.message?.content ?? undefined,

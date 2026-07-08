@@ -23,18 +23,27 @@ requires `OPENROUTER_API_KEY` in `.env` for tests a+b).
   extraction), `seed`, `stop`, the usual sampling params.
 - Modality: text + image + video → text. Pricing: $0 / $0.
 
-### (a) System role — PENDING
+### (a) System role — VERIFIED: ACCEPTED
 
-Blocked on `OPENROUTER_API_KEY`. Re-run the script once the key is in `.env`.
+HTTP 200 with a `system` message present, and the reply demonstrably followed
+the system prompt (pirate-speak test). Strategy: use the `system` role
+normally; no fold-into-first-user-message fallback.
 
-### (b) Native tool_calls in practice — PENDING
+### (b) Native tool_calls — VERIFIED: WORKING
 
-Advertised support (see c) still needs a live round-trip to confirm the
-`:free` endpoint returns real `tool_calls` rather than text. Blocked on the
-same key.
+The `:free` endpoint returned real `tool_calls`
+(`finish_reason: "tool_calls"`, well-formed function name + JSON args).
+Strategy: native AI SDK tool loop (§7.1); no ReAct fallback.
 
-Once (a) and (b) run, findings get hard-coded as constants in
-`src/server/ai/modelCapabilities.ts` and this section gets updated.
+### Operational finding — bursty upstream 429s
+
+The free endpoint intermittently returns 429 "temporarily rate-limited
+upstream" (from both providers: Google AI Studio, Darkbloom) even at trivial
+volume — single spaced requests succeed while back-to-back pairs fail. This
+validates the spec's 429 posture: friendly error in the UI, never auto-retry.
+The useful detail is in `error.metadata.raw`, not `error.message`.
+
+All findings are hard-coded in `src/server/ai/modelCapabilities.ts`.
 
 ## Setup
 
