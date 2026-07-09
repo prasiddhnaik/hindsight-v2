@@ -1,7 +1,7 @@
 import "~/styles/globals.css";
 
 import { type Metadata } from "next";
-import { Geist } from "next/font/google";
+import { Geist, Newsreader } from "next/font/google";
 
 import { Sidebar } from "~/app/_components/sidebar";
 import { TRPCReactProvider } from "~/trpc/react";
@@ -17,14 +17,21 @@ const geist = Geist({
   variable: "--font-geist-sans",
 });
 
+const newsreader = Newsreader({
+  subsets: ["latin"],
+  style: ["italic"],
+  weight: ["400", "500"],
+  variable: "--font-newsreader",
+});
+
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${geist.variable}`}>
-      <body className="bg-neutral-950 text-neutral-100">
+    <html lang="en" className={`${geist.variable} ${newsreader.variable}`}>
+      <body className="bg-bg text-ink antialiased">
         <TRPCReactProvider>
-          <div className="mx-auto flex h-dvh max-w-6xl">
+          <div className="flex h-dvh">
             <Sidebar />
             {children}
           </div>

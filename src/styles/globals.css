@@ -3,4 +3,57 @@
 @theme {
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif,
     "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --font-display: var(--font-newsreader), Georgia, "Times New Roman", serif;
+
+  /* Quiet-studio dark: warm charcoal surfaces, one apricot accent. */
+  --color-bg: #101014;
+  --color-surface: #17171d;
+  --color-raised: #1f1f26;
+  --color-hairline: #27272f;
+  --color-ink: #ececf1;
+  --color-ink-secondary: #a5a5b1;
+  --color-ink-muted: #74747f;
+  --color-accent: #e2a377;
+  --color-accent-soft: #e2a37722;
+  --color-danger: #ef8b81;
+}
+
+::selection {
+  background: var(--color-accent-soft);
+}
+
+/* Thin, unobtrusive scrollbars that match the theme. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-hairline) transparent;
+}
+
+@keyframes thinking-dot {
+  0%,
+  60%,
+  100% {
+    opacity: 0.25;
+    transform: translateY(0);
+  }
+  30% {
+    opacity: 1;
+    transform: translateY(-2px);
+  }
+}
+
+.thinking-dot {
+  animation: thinking-dot 1.2s ease-in-out infinite;
+}
+.thinking-dot:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.thinking-dot:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .thinking-dot {
+    animation: none;
+    opacity: 0.6;
+  }
 }

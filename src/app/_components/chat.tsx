@@ -2,9 +2,20 @@
 
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
+import {
+  AlertIcon,
+  ArrowUpIcon,
+  WrenchIcon,
+} from "~/app/_components/icons";
 import { api } from "~/trpc/react";
+
+const SUGGESTIONS = [
+  "Explain something I've always wondered about",
+  "What's 15% of 2,847?",
+  "Help me plan dinner this week",
+];
 
 interface ChatProps {
   conversationId: string | null;
@@ -14,6 +25,7 @@ interface ChatProps {
 export function Chat({ conversationId, initialMessages }: ChatProps) {
   const [input, setInput] = useState("");
   const conversationIdRef = useRef(conversationId);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const utils = api.useUtils();
   const createConversation = api.conversation.create.useMutation();
 
@@ -43,9 +55,12 @@ export function Chat({ conversationId, initialMessages }: ChatProps) {
 
   const isBusy = status === "submitted" || status === "streaming";
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    const text = input.trim();
+  // Keep the newest message in view while streaming.
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
+  }, [messages, status]);
+
+  async function send(text: string) {
     if (!text || isBusy || createConversation.isPending) return;
 
     if (!conversationIdRef.current) {
@@ -60,83 +75,129 @@ export function Chat({ conversationId, initialMessages }: ChatProps) {
     void sendMessage({ text });
   }
 
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    void send(input.trim());
+  }
+
   return (
-    <div className="flex h-dvh flex-1 flex-col">
-      <div className="flex-1 space-y-4 overflow-y-auto px-4 py-6">
-        {messages.length === 0 && (
-          <p className="pt-24 text-center text-sm text-neutral-500">
-            Ask anything to get started.
-          </p>
-        )}
-
-        {messages.map((message) => (
-          <div
-            key={message.id}
-            className={
-              message.role === "user"
-                ? "ml-auto w-fit max-w-[85%] rounded-2xl rounded-br-sm bg-indigo-600 px-4 py-2.5"
-                : "w-fit max-w-[85%] rounded-2xl rounded-bl-sm bg-neutral-800 px-4 py-2.5"
-            }
-          >
-            {message.parts.some((part) => part.type.startsWith("tool-")) && (
-              <p className="mb-1 text-xs text-neutral-500">
-                🔧{" "}
-                {message.parts
-                  .filter((part) => part.type.startsWith("tool-"))
-                  .map((part) => part.type.replace("tool-", ""))
-                  .join(", ")}
+    <main className="flex h-dvh min-w-0 flex-1 flex-col">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto">
+        <div className="mx-auto w-full max-w-2xl px-6 py-10">
+          {messages.length === 0 && (
+            <div className="flex flex-col items-center pt-[18vh] text-center">
+              <h1 className="font-display text-[32px] leading-tight text-ink italic">
+                What can I help with?
+              </h1>
+              <p className="mt-3 text-sm text-ink-muted">
+                Ask anything — I remember what matters across conversations.
               </p>
-            )}
-            <p className="text-sm whitespace-pre-wrap">
-              {message.parts
+              <div className="mt-8 flex flex-wrap justify-center gap-2">
+                {SUGGESTIONS.map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => void send(s)}
+                    className="rounded-full border border-hairline px-3.5 py-1.5 text-[13px] text-ink-secondary transition-colors duration-150 hover:border-accent/40 hover:text-ink focus-visible:ring-2 focus-visible:ring-accent/60 focus-visible:outline-none"
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="space-y-7">
+            {messages.map((message) => {
+              const text = message.parts
                 .map((part) => (part.type === "text" ? part.text : ""))
-                .join("")}
-            </p>
-          </div>
-        ))}
+                .join("");
+              const tools = message.parts
+                .filter((part) => part.type.startsWith("tool-"))
+                .map((part) => part.type.replace("tool-", ""));
 
-        {status === "submitted" && (
-          <div
-            data-testid="streaming-indicator"
-            className="w-fit rounded-2xl rounded-bl-sm bg-neutral-800 px-4 py-2.5"
-          >
-            <span className="text-sm text-neutral-400">
-              Thinking
-              <span className="animate-pulse">…</span>
-            </span>
-          </div>
-        )}
+              if (message.role === "user") {
+                return (
+                  <div key={message.id} className="flex justify-end">
+                    <div className="max-w-[80%] rounded-2xl rounded-br-md bg-raised px-4 py-2.5">
+                      <p className="text-[15px] leading-relaxed whitespace-pre-wrap">
+                        {text}
+                      </p>
+                    </div>
+                  </div>
+                );
+              }
 
-        {error && (
-          <div
-            data-testid="chat-error"
-            className="rounded-lg border border-red-800 bg-red-950/60 px-4 py-3 text-sm text-red-300"
-          >
-            {error.message ||
-              "Something went wrong. Please try again in a moment."}
+              return (
+                <div key={message.id}>
+                  {tools.length > 0 && (
+                    <p className="mb-2 inline-flex items-center gap-1.5 rounded-full border border-hairline px-2.5 py-1 text-[11.5px] text-ink-muted">
+                      <WrenchIcon className="size-3" />
+                      {tools.join(", ")}
+                    </p>
+                  )}
+                  <div className="text-[15px] leading-7 whitespace-pre-wrap text-ink">
+                    {text}
+                  </div>
+                </div>
+              );
+            })}
+
+            {status === "submitted" && (
+              <div
+                data-testid="streaming-indicator"
+                className="flex items-center gap-1 pt-1"
+                aria-label="Assistant is thinking"
+              >
+                <span className="thinking-dot size-1.5 rounded-full bg-ink-secondary" />
+                <span className="thinking-dot size-1.5 rounded-full bg-ink-secondary" />
+                <span className="thinking-dot size-1.5 rounded-full bg-ink-secondary" />
+              </div>
+            )}
+
+            {error && (
+              <div
+                data-testid="chat-error"
+                className="flex items-start gap-2.5 rounded-xl border border-danger/25 bg-danger/10 px-4 py-3 text-[13.5px] text-danger"
+              >
+                <AlertIcon className="mt-0.5 size-4 shrink-0" />
+                <span>
+                  {error.message ||
+                    "Something went wrong. Please try again in a moment."}
+                </span>
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </div>
 
-      <form
-        onSubmit={(e) => void handleSubmit(e)}
-        className="flex gap-2 border-t border-neutral-800 p-4"
-      >
-        <input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="Message Hindsight…"
-          autoFocus
-          className="flex-1 rounded-xl border border-neutral-700 bg-neutral-900 px-4 py-2.5 text-sm outline-none placeholder:text-neutral-500 focus:border-indigo-500"
-        />
-        <button
-          type="submit"
-          disabled={isBusy || input.trim() === ""}
-          className="rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-medium hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-40"
+      <div className="px-6 pb-4">
+        <form
+          onSubmit={handleSubmit}
+          className="mx-auto w-full max-w-2xl rounded-2xl border border-hairline bg-surface transition-colors duration-200 focus-within:border-accent/50"
         >
-          {isBusy ? "…" : "Send"}
-        </button>
-      </form>
-    </div>
+          <div className="flex items-end gap-2 p-2 pl-4">
+            <input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Message Hindsight…"
+              aria-label="Message Hindsight"
+              autoFocus
+              className="min-w-0 flex-1 bg-transparent py-2 text-[15px] outline-none placeholder:text-ink-muted"
+            />
+            <button
+              type="submit"
+              disabled={isBusy || input.trim() === ""}
+              aria-label="Send message"
+              className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-accent text-bg transition-all duration-150 hover:brightness-110 active:scale-95 disabled:cursor-not-allowed disabled:bg-raised disabled:text-ink-muted"
+            >
+              <ArrowUpIcon className="size-4" />
+            </button>
+          </div>
+        </form>
+        <p className="mx-auto mt-2 max-w-2xl text-center text-[11px] text-ink-muted">
+          Gemma 4 · free tier — replies can be rate-limited at busy times
+        </p>
+      </div>
+    </main>
   );
 }
