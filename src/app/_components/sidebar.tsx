@@ -89,6 +89,19 @@ export function Sidebar() {
           );
         })}
       </nav>
+
+      <div className="border-t border-neutral-800 px-2 py-2">
+        <Link
+          href="/settings"
+          className={`block rounded-lg px-2 py-1.5 text-sm ${
+            pathname === "/settings"
+              ? "bg-neutral-800 text-neutral-100"
+              : "text-neutral-400 hover:bg-neutral-800/60 hover:text-neutral-200"
+          }`}
+        >
+          Settings
+        </Link>
+      </div>
     </aside>
   );
 }

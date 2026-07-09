@@ -1,14 +1,15 @@
 import { conversationRouter } from "~/server/api/routers/conversation";
+import { memoryRouter } from "~/server/api/routers/memory";
 import { createCallerFactory, createTRPCRouter } from "~/server/api/trpc";
 
 /**
  * This is the primary router for your server.
  *
  * All routers added in /api/routers should be manually added here.
- * Memory router arrives in Phase 4.
  */
 export const appRouter = createTRPCRouter({
   conversation: conversationRouter,
+  memory: memoryRouter,
 });
 
 // export type definition of API
