@@ -45,6 +45,34 @@ The useful detail is in `error.metadata.raw`, not `error.message`.
 
 All findings are hard-coded in `src/server/ai/modelCapabilities.ts`.
 
+## Phase 1 — Streaming chat (no persistence)
+
+Stack: create-t3-app scaffold (Next.js App Router, TypeScript, Tailwind,
+tRPC + Prisma wired for later phases), AI SDK v7 + `@openrouter/ai-sdk-provider`.
+The only streaming endpoint is `src/app/api/chat/route.ts`
+(`maxDuration = 60`); it delegates to `src/server/ai/`.
+
+Design decisions of note:
+
+- `maxRetries: 0` on `streamText` — the SDK's default silently retried 429s
+  twice with backoff, violating §3.1 (failed requests count against the daily
+  quota). Caught live during verification.
+- `extraBody: { transforms: [] }` on the provider — OpenRouter must never
+  middle-out truncate; we own truncation (§6).
+- 429 → "The free model is rate-limited right now. Please wait a minute and
+  try again." via `src/server/ai/errors.ts`; the upstream detail from
+  `error.metadata.raw` goes to server logs only.
+
+Verified 2026-07-08 (headless Chrome via puppeteer-core):
+
+- Initial render: header, empty state, disabled send button — PASS.
+- Streaming: thinking indicator, then assistant text grew incrementally
+  (64 → 218 chars observed mid-stream) — PASS. Chunking from the free
+  endpoint is coarse.
+- Error state: real upstream 429 rendered the friendly banner in-browser
+  (also reproduced deterministically via request interception replaying the
+  server's exact SSE frames). No blank screen, no crash, no console errors.
+
 ## Setup
 
 ```bash
