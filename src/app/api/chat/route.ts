@@ -61,11 +61,13 @@ export async function POST(req: Request) {
     await persistUserMessage(conversationId, userText);
     await maybeSetTitle(conversationId, userText);
 
-    // Every model request passes through the single budgeted gate (§3.3);
-    // the returned messages already start with the system block.
+    // Every model request passes through the single budgeted gate (§3.3).
+    // The SDK requires system content via `system`, never inside `messages`.
+    const context = await assembleContext(conversationId, getUserId());
     const result = streamText({
       model: chatModel,
-      messages: await assembleContext(conversationId, getUserId()),
+      system: context.system,
+      messages: context.messages,
       tools: chatTools,
       stopWhen: stepCountIs(5), // §7.1 — mandatory step cap on every call
       experimental_repairToolCall: repairToolCall,

@@ -68,16 +68,17 @@ async function seedConversation(
   return conv.id;
 }
 
-function checkPlan(messages: Awaited<ReturnType<typeof assembleContext>>) {
-  const total = messages.reduce(
-    (sum, m) => sum + countTokens(m.content as string),
-    0,
-  );
-  let alternationOk = messages[0]!.role === "system";
-  for (let i = 2; i < messages.length; i++) {
+function checkPlan({
+  system,
+  messages,
+}: Awaited<ReturnType<typeof assembleContext>>) {
+  const total =
+    countTokens(system) +
+    messages.reduce((sum, m) => sum + countTokens(m.content as string), 0);
+  let alternationOk = messages[0]?.role === "user";
+  for (let i = 1; i < messages.length; i++) {
     if (messages[i]!.role === messages[i - 1]!.role) alternationOk = false;
   }
-  if (messages[1] && messages[1].role !== "user") alternationOk = false;
   return { total, alternationOk };
 }
 
@@ -90,13 +91,14 @@ const bigId = await seedConversation("synthetic-100k", 115, 450, false);
 const bigPlan = await assembleContext(bigId, getUserId()); // compaction may 429; that's fine
 const big = checkPlan(bigPlan);
 console.log(
-  `assembled: ${bigPlan.length} messages, ${big.total} measured tokens`,
+  `assembled: ${bigPlan.messages.length} messages, ${big.total} measured tokens`,
 );
 console.log(`  ≤ ${TOTAL_BUDGET} budget: ${big.total <= TOTAL_BUDGET ? "PASS" : "FAIL"}`);
 console.log(`  role alternation valid: ${big.alternationOk ? "PASS" : "FAIL"}`);
-const newestKept = (bigPlan[bigPlan.length - 1]!.content as string).includes(
-  "Question 114",
-) || (bigPlan[bigPlan.length - 1]!.content as string).includes("Answer 114");
+const lastContent = bigPlan.messages[bigPlan.messages.length - 1]!
+  .content as string;
+const newestKept =
+  lastContent.includes("Question 114") || lastContent.includes("Answer 114");
 console.log(`  newest message kept: ${newestKept ? "PASS" : "FAIL"}`);
 await db.conversation.delete({ where: { id: bigId } });
 console.log("  cleaned up.");
@@ -137,13 +139,12 @@ console.log(`  summary contains codename: ${summary.includes(CODENAME) ? "PASS" 
 // Summary must be REUSED on the next assembly, and the codename must not
 // appear in any verbatim (non-system) message.
 const plan2 = await assembleContext(smallId, getUserId());
-const systemContent = plan2[0]!.content as string;
 console.log(
-  `  summary block reused in system message: ${systemContent.includes("Summary of earlier parts") ? "PASS" : "FAIL"}`,
+  `  summary block reused in system message: ${plan2.system.includes("Summary of earlier parts") ? "PASS" : "FAIL"}`,
 );
-const inVerbatim = plan2
-  .slice(1)
-  .some((m) => (m.content as string).includes(CODENAME));
+const inVerbatim = plan2.messages.some((m) =>
+  (m.content as string).includes(CODENAME),
+);
 console.log(
   `  codename absent from verbatim window (lives only in summary): ${!inVerbatim ? "PASS" : "FAIL"}`,
 );

@@ -76,16 +76,16 @@ describe("groupIntoUnits", () => {
 });
 
 describe("planContext — basics", () => {
-  test("empty conversation → just the system message", () => {
+  test("empty conversation → system block only, no history", () => {
     const result = plan([]);
-    expect(result.messages.length).toBe(1);
-    expect(result.messages[0]!.role).toBe("system");
+    expect(result.system).toContain(SYSTEM);
+    expect(result.messages.length).toBe(0);
     expect(result.droppedRows.length).toBe(0);
   });
 
   test("one-message conversation", () => {
     const result = plan([row("user", "hello there")]);
-    expect(result.messages.map((m) => m.role)).toEqual(["system", "user"]);
+    expect(result.messages.map((m) => m.role)).toEqual(["user"]);
     expect(result.droppedRows.length).toBe(0);
   });
 
@@ -96,9 +96,9 @@ describe("planContext — basics", () => {
       row("user", "third try"),
     ]);
     const roles = result.messages.map((m) => m.role);
-    expect(roles).toEqual(["system", "user"]);
-    expect(result.messages[1]!.content).toContain("first try");
-    expect(result.messages[1]!.content).toContain("third try");
+    expect(roles).toEqual(["user"]);
+    expect(result.messages[0]!.content).toContain("first try");
+    expect(result.messages[0]!.content).toContain("third try");
   });
 });
 
@@ -113,10 +113,10 @@ describe("planContext — pair-boundary trimming", () => {
     expect(result.droppedRows[0]!.id).toBe(rows[0]!.id);
     expect(result.droppedRows.length % 2).toBe(0);
 
-    // First history message after system is a user message.
-    expect(result.messages[1]!.role).toBe("user");
+    // First kept history message is a user message.
+    expect(result.messages[0]!.role).toBe("user");
     // Strict alternation throughout.
-    for (let i = 2; i < result.messages.length; i++) {
+    for (let i = 1; i < result.messages.length; i++) {
       expect(result.messages[i]!.role).not.toBe(result.messages[i - 1]!.role);
     }
     // Newest message survived.
@@ -171,10 +171,9 @@ describe("planContext — budget enforcement", () => {
     const summary = "Earlier the user discussed dogs. ".repeat(400); // ~2800 tokens, over budget
     const result = plan([row("user", "hi")], { memories, summary });
 
-    const system = result.messages[0]!.content as string;
-    expect(system).toContain("Known facts about the user");
-    expect(system).toContain("not instructions");
-    expect(system).toContain("Summary of earlier parts");
+    expect(result.system).toContain("Known facts about the user");
+    expect(result.system).toContain("not instructions");
+    expect(result.system).toContain("Summary of earlier parts");
     expect(result.warnings).toContain(
       "summary exceeded SUMMARY_BUDGET and was truncated",
     );

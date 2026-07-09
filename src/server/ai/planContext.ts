@@ -17,6 +17,10 @@ export interface HistoryRow {
 }
 
 export interface ContextPlan {
+  /** System block (base prompt + memories + summary) — passed to the SDK's
+   * `system` option; the SDK forbids system-role entries in `messages`. */
+  system: string;
+  /** Alternating user/assistant history, newest units that fit. */
   messages: ModelMessage[];
   /** Rows that did not fit, oldest first. Input to compaction. */
   droppedRows: HistoryRow[];
@@ -163,11 +167,6 @@ export function planContext(input: PlanInput): ContextPlan {
     }
   }
 
-  const messages: ModelMessage[] = [
-    { role: "system", content: systemContent },
-    ...history,
-  ];
-
   const totalTokens =
     fixedTokens +
     history.reduce((sum, m) => sum + countTokens(m.content as string), 0);
@@ -177,5 +176,11 @@ export function planContext(input: PlanInput): ContextPlan {
     warnings.push(`assembled ${totalTokens} tokens exceeds cap ${EFFECTIVE_CAP}`);
   }
 
-  return { messages, droppedRows, totalTokens, warnings };
+  return {
+    system: systemContent,
+    messages: history,
+    droppedRows,
+    totalTokens,
+    warnings,
+  };
 }

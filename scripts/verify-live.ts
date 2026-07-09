@@ -49,7 +49,8 @@ async function windowClosed(name: StepName): Promise<never> {
   process.exit(2);
 }
 
-/** One route-level chat attempt; null = rate-limited. */
+/** One route-level chat attempt; null = rate-limited (window closed). Any
+ * other error is a real bug and must fail loudly, never look like congestion. */
 async function chatOnce(conversationId: string, text: string): Promise<string | null> {
   const res = await fetch("http://localhost:3000/api/chat", {
     method: "POST",
@@ -60,7 +61,12 @@ async function chatOnce(conversationId: string, text: string): Promise<string | 
     }),
   });
   const body = await res.text();
-  if (body.includes('"type":"error"') || !res.ok) return null;
+  if (body.includes('"type":"error"') || !res.ok) {
+    if (body.includes("rate-limited")) return null;
+    console.log(`FAIL route returned a non-rate-limit error: ${body.slice(0, 300)}`);
+    await db.$disconnect();
+    process.exit(1);
+  }
   await new Promise((r) => setTimeout(r, 1500));
   const reply = await db.message.findFirst({
     where: { conversationId, role: "assistant", toolCalls: { equals: undefined } },

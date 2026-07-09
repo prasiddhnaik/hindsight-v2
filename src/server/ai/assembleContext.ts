@@ -1,9 +1,11 @@
-import type { ModelMessage } from "ai";
-
 import { db } from "~/server/db";
 import { compactSpan } from "./compaction";
 import { COMPACTION_MIN_NEW_MESSAGES } from "./contextBudget";
-import { planContext, type HistoryRow } from "./planContext";
+import {
+  planContext,
+  type ContextPlan,
+  type HistoryRow,
+} from "./planContext";
 import { SYSTEM_PROMPT } from "./systemPrompt";
 
 /**
@@ -15,7 +17,7 @@ import { SYSTEM_PROMPT } from "./systemPrompt";
 export async function assembleContext(
   conversationId: string,
   userId: string,
-): Promise<ModelMessage[]> {
+): Promise<Pick<ContextPlan, "system" | "messages">> {
   const conversation = await db.conversation.findFirst({
     where: { id: conversationId, userId },
     select: { summary: true, summaryUpToMessageId: true },
@@ -86,5 +88,5 @@ export async function assembleContext(
   console.log(
     `[assembleContext] ${conversationId}: ${plan.messages.length} messages, ~${plan.totalTokens} tokens (cap incl. margin), dropped ${plan.droppedRows.length} rows`,
   );
-  return plan.messages;
+  return { system: plan.system, messages: plan.messages };
 }
