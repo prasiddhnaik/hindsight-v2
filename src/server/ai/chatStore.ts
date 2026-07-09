@@ -1,4 +1,4 @@
-import type { ModelMessage, UIMessage } from "ai";
+import type { UIMessage } from "ai";
 
 import { db } from "~/server/db";
 import { countTokens } from "./tokens";
@@ -66,39 +66,6 @@ export async function maybeSetTitle(
     where: { id: conversationId, title: "New chat" },
     data: { title },
   });
-}
-
-/**
- * Phase 2 history loader: DB is the source of truth; the client's copy of
- * history is never trusted or sent to the model. Bounded to the most recent
- * messages as a stopgap — Phase 3 replaces this with token-budgeted
- * assembleContext().
- */
-export async function loadModelMessages(
-  conversationId: string,
-  limit = 100,
-): Promise<ModelMessage[]> {
-  const rows = await db.message.findMany({
-    where: { conversationId, role: { in: ["user", "assistant"] } },
-    orderBy: { createdAt: "desc" },
-    take: limit,
-  });
-  rows.reverse();
-
-  // §3.2: history must strictly alternate user/assistant. Consecutive
-  // same-role messages happen legitimately (e.g. a user re-sends after a
-  // failed generation) — merge them instead of sending adjacent duplicates.
-  const merged: ModelMessage[] = [];
-  for (const row of rows) {
-    const role = row.role as "user" | "assistant";
-    const previous = merged[merged.length - 1];
-    if (previous && previous.role === role) {
-      previous.content = `${previous.content as string}\n\n${row.content}`;
-    } else {
-      merged.push({ role, content: row.content });
-    }
-  }
-  return merged;
 }
 
 /** DB messages → UIMessages for useChat's initialMessages. */

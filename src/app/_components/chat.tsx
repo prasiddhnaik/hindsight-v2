@@ -78,6 +78,15 @@ export function Chat({ conversationId, initialMessages }: ChatProps) {
                 : "w-fit max-w-[85%] rounded-2xl rounded-bl-sm bg-neutral-800 px-4 py-2.5"
             }
           >
+            {message.parts.some((part) => part.type.startsWith("tool-")) && (
+              <p className="mb-1 text-xs text-neutral-500">
+                🔧{" "}
+                {message.parts
+                  .filter((part) => part.type.startsWith("tool-"))
+                  .map((part) => part.type.replace("tool-", ""))
+                  .join(", ")}
+              </p>
+            )}
             <p className="text-sm whitespace-pre-wrap">
               {message.parts
                 .map((part) => (part.type === "text" ? part.text : ""))

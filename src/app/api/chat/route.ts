@@ -1,17 +1,20 @@
-import { streamText, type UIMessage } from "ai";
+import { stepCountIs, streamText, type UIMessage } from "ai";
 import { z } from "zod";
 
+import { assembleContext } from "~/server/ai/assembleContext";
 import {
   getOwnedConversation,
-  loadModelMessages,
   maybeSetTitle,
   persistAssistantMessage,
   persistUserMessage,
   uiMessageText,
 } from "~/server/ai/chatStore";
 import { friendlyErrorMessage } from "~/server/ai/errors";
+import { maybeExtractMemories } from "~/server/ai/memory/extract";
 import { chatModel } from "~/server/ai/provider";
-import { SYSTEM_PROMPT } from "~/server/ai/systemPrompt";
+import { chatTools } from "~/server/ai/tools";
+import { repairToolCall } from "~/server/ai/tools/repair";
+import { persistToolActivity } from "~/server/ai/toolStore";
 import { getUserId } from "~/server/user";
 
 export const maxDuration = 60;
@@ -58,17 +61,35 @@ export async function POST(req: Request) {
     await persistUserMessage(conversationId, userText);
     await maybeSetTitle(conversationId, userText);
 
+    // Every model request passes through the single budgeted gate (§3.3);
+    // the returned messages already start with the system block.
     const result = streamText({
       model: chatModel,
-      system: SYSTEM_PROMPT,
-      messages: await loadModelMessages(conversationId),
+      messages: await assembleContext(conversationId, getUserId()),
+      tools: chatTools,
+      stopWhen: stepCountIs(5), // §7.1 — mandatory step cap on every call
+      experimental_repairToolCall: repairToolCall,
       // §3.1: failed requests count against the daily quota and 429s must
       // never be auto-retried — disable the SDK's default retry-with-backoff.
       maxRetries: 0,
-      onFinish: async ({ text }) => {
+      onStepFinish: (step) => {
+        for (const call of step.toolCalls) {
+          const match = step.toolResults.find(
+            (r) => r.toolCallId === call.toolCallId,
+          );
+          console.log(
+            `[tools] step: ${call.toolName}(${JSON.stringify(call.input)}) → ${JSON.stringify(match?.output ?? null)?.slice(0, 200)}`,
+          );
+        }
+      },
+      onFinish: async ({ text, steps }) => {
+        await persistToolActivity(conversationId, steps);
         if (text.trim()) {
           await persistAssistantMessage(conversationId, text);
         }
+        // Batched fact extraction, one call per 5 user messages (Phase 4);
+        // best-effort and never blocks or breaks the finished stream.
+        await maybeExtractMemories(conversationId, getUserId());
       },
     });
 
