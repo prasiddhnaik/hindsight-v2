@@ -154,8 +154,39 @@ the model sees failures as data. Tool calls/results persist to the DB
 `toolCallId`); context planning keeps them atomic with their turn unit.
 Tool definitions are measured at startup against the 1,500-token reserve.
 
-Live acceptance: `bun scripts/verify-phase5.ts` (chaining, graceful tool
-failure, malformed-args repair, step cap).
+Verified 2026-07-09: malformed-args repair PASSED live — the repair call
+corrected `{"expr": "0.15 * 2847"}` to `{"expression": "0.15 * 2847"}` from
+the fed-back validation error. Chaining/failure checks pending (see below).
+
+## Live-verification status
+
+The `:free` endpoint has been heavily congested ("temporarily rate-limited
+upstream" from both providers, in bursts, all day). All code-level and
+offline acceptance is green; the remaining *model-behavior* checks run via
+`bun scripts/verify-live.ts` — a resumable runner that makes one attempt per
+check, records passes in `.verify-live-state.json`, exits on the first 429,
+and orders checks smallest-request-first. A probe loop launches it whenever
+a tiny request slips through.
+
+| Check | Status |
+|---|---|
+| P3: 100K conv → ≤32K request, valid alternation | PASS |
+| P3: compaction produces summary w/ planted codename | PASS (2026-07-09) |
+| P3: summary reused; codename only in summary block | PASS |
+| P3: model answers codename question via route | pending (large-request windows) |
+| P4: extraction stores "vegetarian" fact | pending |
+| P4: new conversation respects the fact | pending |
+| P4: malicious memory doesn't hijack | pending |
+| P4: settings page lists/deletes memories | PASS (UI + DB) |
+| P5: malformed-args repair | PASS |
+| P5: chaining calculator + date, ≤5 steps | pending |
+| P5: failing tool → spoken recovery | pending |
+
+To unblock faster (account-level, not code): OpenRouter's error suggests
+adding your own Google AI Studio key at
+https://openrouter.ai/settings/integrations — BYOK requests get your own
+Gemma rate limits instead of the shared free pool. Alternatively, a one-time
+$10 credit purchase raises the free-model cap to 1,000 requests/day.
 
 ## Setup
 
