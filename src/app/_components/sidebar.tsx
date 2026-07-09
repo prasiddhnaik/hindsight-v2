@@ -6,7 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { GearIcon, PencilIcon, PlusIcon, TrashIcon } from "~/app/_components/icons";
 import { api } from "~/trpc/react";
 
-export function Sidebar() {
+export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
   const router = useRouter();
   const utils = api.useUtils();
@@ -32,7 +32,13 @@ export function Sidebar() {
   }
 
   return (
-    <aside className="flex w-64 shrink-0 flex-col border-r border-hairline bg-surface/40">
+    <aside
+      onClick={(e) => {
+        // Any link click inside the drawer closes it on mobile.
+        if ((e.target as HTMLElement).closest("a")) onNavigate?.();
+      }}
+      className="flex h-dvh w-64 shrink-0 flex-col border-r border-hairline bg-bg md:bg-surface/40"
+    >
       <div className="flex items-center justify-between px-4 pt-4 pb-3">
         <Link href="/" className="group flex items-baseline gap-1.5">
           <span className="text-[15px] font-semibold tracking-tight">

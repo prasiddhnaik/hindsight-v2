@@ -12,7 +12,7 @@ export default function SettingsPage() {
 
   return (
     <main className="flex-1 overflow-y-auto">
-      <div className="mx-auto w-full max-w-2xl px-6 py-10">
+      <div className="mx-auto w-full max-w-2xl px-4 py-8 md:px-6 md:py-10">
         <h1 className="text-xl font-semibold tracking-tight">Settings</h1>
 
         <section className="mt-8">

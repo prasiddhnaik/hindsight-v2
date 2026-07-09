@@ -81,12 +81,12 @@ export function Chat({ conversationId, initialMessages }: ChatProps) {
   }
 
   return (
-    <main className="flex h-dvh min-w-0 flex-1 flex-col">
+    <main className="flex min-h-0 min-w-0 flex-1 flex-col">
       <div ref={scrollRef} className="flex-1 overflow-y-auto">
-        <div className="mx-auto w-full max-w-2xl px-6 py-10">
+        <div className="mx-auto w-full max-w-2xl px-4 py-8 md:px-6 md:py-10">
           {messages.length === 0 && (
-            <div className="flex flex-col items-center pt-[18vh] text-center">
-              <h1 className="font-display text-[32px] leading-tight text-ink italic">
+            <div className="flex flex-col items-center pt-[14vh] text-center md:pt-[18vh]">
+              <h1 className="font-display text-[28px] leading-tight text-ink italic md:text-[32px]">
                 What can I help with?
               </h1>
               <p className="mt-3 text-sm text-ink-muted">
@@ -170,7 +170,7 @@ export function Chat({ conversationId, initialMessages }: ChatProps) {
         </div>
       </div>
 
-      <div className="px-6 pb-4">
+      <div className="px-4 pb-[max(1rem,env(safe-area-inset-bottom))] md:px-6">
         <form
           onSubmit={handleSubmit}
           className="mx-auto w-full max-w-2xl rounded-2xl border border-hairline bg-surface transition-colors duration-200 focus-within:border-accent/50"
@@ -182,13 +182,13 @@ export function Chat({ conversationId, initialMessages }: ChatProps) {
               placeholder="Message Hindsight…"
               aria-label="Message Hindsight"
               autoFocus
-              className="min-w-0 flex-1 bg-transparent py-2 text-[15px] outline-none placeholder:text-ink-muted"
+              className="min-w-0 flex-1 bg-transparent py-2 text-base outline-none placeholder:text-ink-muted md:text-[15px]"
             />
             <button
               type="submit"
               disabled={isBusy || input.trim() === ""}
               aria-label="Send message"
-              className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-accent text-bg transition-all duration-150 hover:brightness-110 active:scale-95 disabled:cursor-not-allowed disabled:bg-raised disabled:text-ink-muted"
+              className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-accent text-bg transition-all duration-150 hover:brightness-110 active:scale-95 disabled:cursor-not-allowed disabled:bg-raised disabled:text-ink-muted md:size-9"
             >
               <ArrowUpIcon className="size-4" />
             </button>

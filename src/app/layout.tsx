@@ -3,7 +3,7 @@ import "~/styles/globals.css";
 import { type Metadata } from "next";
 import { Geist, Newsreader } from "next/font/google";
 
-import { Sidebar } from "~/app/_components/sidebar";
+import { AppShell } from "~/app/_components/appShell";
 import { TRPCReactProvider } from "~/trpc/react";
 
 export const metadata: Metadata = {
@@ -31,10 +31,7 @@ export default function RootLayout({
     <html lang="en" className={`${geist.variable} ${newsreader.variable}`}>
       <body className="bg-bg text-ink antialiased">
         <TRPCReactProvider>
-          <div className="flex h-dvh">
-            <Sidebar />
-            {children}
-          </div>
+          <AppShell>{children}</AppShell>
         </TRPCReactProvider>
       </body>
     </html>
