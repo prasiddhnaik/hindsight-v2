@@ -1,17 +1,14 @@
-import {
-  createCallerFactory,
-  createTRPCRouter,
-  publicProcedure,
-} from "~/server/api/trpc";
+import { conversationRouter } from "~/server/api/routers/conversation";
+import { createCallerFactory, createTRPCRouter } from "~/server/api/trpc";
 
 /**
  * This is the primary router for your server.
  *
  * All routers added in /api/routers should be manually added here.
- * Conversation + memory routers arrive in Phases 2 and 4.
+ * Memory router arrives in Phase 4.
  */
 export const appRouter = createTRPCRouter({
-  health: publicProcedure.query(() => "ok" as const),
+  conversation: conversationRouter,
 });
 
 // export type definition of API

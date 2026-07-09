@@ -11,11 +11,41 @@ datasource db {
     url      = env("DATABASE_URL")
 }
 
-model Post {
-    id        Int      @id @default(autoincrement())
-    name      String
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+model Conversation {
+    id                   String    @id @default(cuid())
+    userId               String
+    title                String    @default("New chat")
+    summary              String? // rolling compaction summary of older turns (Phase 3)
+    summaryUpToMessageId String? // last message covered by summary
+    createdAt            DateTime  @default(now())
+    updatedAt            DateTime  @updatedAt
+    messages             Message[]
 
-    @@index([name])
+    @@index([userId, updatedAt])
+}
+
+model Message {
+    id             String       @id @default(cuid())
+    conversationId String
+    conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+    role           String // "user" | "assistant" | "tool" | "system"
+    content        String
+    toolCalls      Json? // assistant tool-call requests (Phase 5)
+    toolCallId     String? // links a tool result to its request (Phase 5)
+    tokenCount     Int // cached at write time via gpt-tokenizer
+    createdAt      DateTime     @default(now())
+
+    @@index([conversationId, createdAt])
+}
+
+model Memory {
+    id              String   @id @default(cuid())
+    userId          String
+    content         String // one durable fact, e.g. "User prefers TypeScript"
+    category        String? // "preference" | "fact" | "project" | ...
+    sourceMessageId String?
+    // embedding vector added in Phase 4 via custom migration (pgvector) if needed
+    createdAt       DateTime @default(now())
+
+    @@index([userId])
 }

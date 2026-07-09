@@ -73,6 +73,31 @@ Verified 2026-07-08 (headless Chrome via puppeteer-core):
   (also reproduced deterministically via request interception replaying the
   server's exact SSE frames). No blank screen, no crash, no console errors.
 
+## Phase 2 — Persistence
+
+Prisma models per spec §5 (`Conversation`, `Message`, `Memory`) on Neon
+Postgres; `bun run db:push` applied. The chat route persists the user message
+before generation and the assistant message in `onFinish`; history sent to
+the model is loaded from the DB (client history is never trusted). tRPC
+router: `conversation.list/create/rename/delete`. Sidebar + `/chat/[id]`
+pages; a conversation row is created lazily on first send and the URL swaps
+shallowly so streaming isn't interrupted.
+
+Notable: consecutive same-role messages are merged at load time to preserve
+Gemma's strict user/assistant alternation (§3.2) — this occurs naturally
+when a user re-sends after a rate-limited generation.
+
+Verified 2026-07-08 (headless Chrome + direct DB queries):
+
+- Mid-conversation hard refresh restores full history from the DB — PASS.
+- Two conversations don't bleed into each other (checked both directions) — PASS.
+- Delete cascades: conversation row and all messages confirmed gone at the
+  DB level — PASS.
+- `tokenCount` cached on every message write — confirmed in DB rows.
+- Assistant replies persist via `onFinish` (observed live in-browser for a
+  conversation later removed by the cascade test; DB-level re-confirmation
+  pending — the free endpoint is congested and a spaced probe is retrying).
+
 ## Setup
 
 ```bash
