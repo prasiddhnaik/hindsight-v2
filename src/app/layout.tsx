@@ -19,7 +19,7 @@ const geist = Geist({
 
 const newsreader = Newsreader({
   subsets: ["latin"],
-  style: ["italic"],
+  style: ["normal", "italic"],
   weight: ["400", "500"],
   variable: "--font-newsreader",
 });
@@ -29,7 +29,7 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" className={`${geist.variable} ${newsreader.variable}`}>
-      <body className="bg-bg text-ink antialiased">
+      <body className="bg-bg font-sans text-ink antialiased">
         <TRPCReactProvider>
           <AppShell>{children}</AppShell>
         </TRPCReactProvider>

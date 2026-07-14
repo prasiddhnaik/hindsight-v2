@@ -5,17 +5,42 @@
     "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
   --font-display: var(--font-newsreader), Georgia, "Times New Roman", serif;
 
-  /* Quiet-studio dark: warm charcoal surfaces, one apricot accent. */
-  --color-bg: #101014;
-  --color-surface: #17171d;
-  --color-raised: #1f1f26;
-  --color-hairline: #27272f;
-  --color-ink: #ececf1;
-  --color-ink-secondary: #a5a5b1;
-  --color-ink-muted: #74747f;
-  --color-accent: #e2a377;
-  --color-accent-soft: #e2a37722;
-  --color-danger: #ef8b81;
+  /* Nocturne Studio: warm near-black surfaces and restrained status color. */
+  --color-bg: #0c0d0d;
+  --color-surface: #131411;
+  --color-raised: #1b1c19;
+  --color-ink: #f4eee4;
+  --color-ink-secondary: #c7c2b9;
+  --color-ink-muted: #94958e;
+  --color-accent: #f09a68;
+  --color-success: #9fbe98;
+  --color-danger: #ed8b87;
+  --color-hairline: #2a2b27;
+  --color-accent-soft: color-mix(
+    in srgb,
+    var(--color-accent) 14%,
+    transparent
+  );
+  --color-scrim: color-mix(in srgb, var(--color-bg) 78%, transparent);
+
+  --ease-studio: cubic-bezier(0.22, 1, 0.36, 1);
+  --duration-fast: 150ms;
+  --duration-sheet: 220ms;
+  --shadow-lift: 0 12px 32px
+    color-mix(in srgb, var(--color-bg) 56%, transparent);
+  --shadow-sheet: 0 24px 72px
+    color-mix(in srgb, var(--color-bg) 72%, transparent);
+}
+
+html {
+  color-scheme: dark;
+  background: var(--color-bg);
+}
+
+body {
+  min-height: 100dvh;
+  font-size: 16px;
+  line-height: 1.65;
 }
 
 ::selection {
@@ -144,9 +169,65 @@
   animation-delay: 0.3s;
 }
 
+@keyframes modal-sheet-scrim-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modal-sheet-left-in {
+  from {
+    opacity: 0;
+    transform: translateX(-1rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes modal-sheet-right-in {
+  from {
+    opacity: 0;
+    transform: translateX(1rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.modal-sheet-scrim {
+  animation: modal-sheet-scrim-in var(--duration-fast) ease-out both;
+}
+
+.modal-sheet-panel {
+  top: env(safe-area-inset-top);
+  bottom: env(safe-area-inset-bottom);
+  animation-duration: var(--duration-sheet);
+  animation-timing-function: var(--ease-studio);
+  animation-fill-mode: both;
+}
+
+.modal-sheet-panel[data-side="left"] {
+  animation-name: modal-sheet-left-in;
+}
+
+.modal-sheet-panel[data-side="right"] {
+  animation-name: modal-sheet-right-in;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .thinking-dot {
-    animation: none;
-    opacity: 0.6;
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
   }
 }
