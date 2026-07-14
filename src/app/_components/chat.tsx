@@ -3,6 +3,8 @@
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
 import { useEffect, useMemo, useRef, useState } from "react";
+import Markdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 import {
   AlertIcon,
@@ -135,8 +137,8 @@ export function Chat({ conversationId, initialMessages }: ChatProps) {
                       {tools.join(", ")}
                     </p>
                   )}
-                  <div className="text-[15px] leading-7 whitespace-pre-wrap text-ink">
-                    {text}
+                  <div className="markdown text-[15px] leading-7 text-ink">
+                    <Markdown remarkPlugins={[remarkGfm]}>{text}</Markdown>
                   </div>
                 </div>
               );

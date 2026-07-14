@@ -55,10 +55,11 @@ if missing, reseed with `bun scripts/verify-phase3.ts part2`.
 
 The visual foundation is in; remaining design tasks, roughly in value order:
 
-1. **Markdown rendering for assistant replies** (biggest gap): model outputs
-   markdown (`###`, `**bold**`, lists, code) that currently renders as plain
-   text — see the recipe reply. Add streaming-safe markdown (e.g.
-   react-markdown + remark-gfm), styled code blocks with copy button.
+1. ~~**Markdown rendering for assistant replies**~~ DONE 2026-07-10:
+   react-markdown + remark-gfm with on-theme `.markdown` styles (headings,
+   lists, code/pre, tables, blockquotes, links); verified against the stored
+   recipe reply in headless Chrome. Code-block copy button still open
+   (folded into item 3).
 2. **Replace `window.prompt`/`window.confirm`** (rename/delete) with themed
    inline editing or a small dialog component.
 3. **Message actions**: copy button on assistant replies; maybe regenerate.
