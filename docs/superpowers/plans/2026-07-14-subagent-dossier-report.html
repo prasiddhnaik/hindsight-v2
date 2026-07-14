@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sub-agent Dossier Report Implementation Plan</title>
+  <style>body{max-width:840px;margin:40px auto;padding:0 20px;font:15px/1.6 system-ui;color:#171717}h1,h2{line-height:1.2}h2{margin-top:30px}code{background:#f2f2f2;padding:2px 5px;border-radius:4px}li+li{margin-top:7px}</style>
+</head>
+<body>
+  <h1>Sub-agent dossier report implementation plan</h1>
+  <p><strong>Execution:</strong> Inline by the root agent. Sub-agents remain stopped.</p>
+  <p><strong>Goal:</strong> Replace the existing generic report with a detailed, visual, evidence-backed dossier for every agent run used during the Nocturne redesign.</p>
+  <p><strong>Architecture:</strong> One dependency-free HTML artifact with a semantic document structure, inline CSS, CSS-only explanatory visuals, and explicit evidence/confidence labels.</p>
+  <p><strong>Tech:</strong> HTML5 and CSS only.</p>
+
+  <h2>Global constraints</h2>
+  <ul>
+    <li>Do not restart sub-agents.</li>
+    <li>Do not use external assets, scripts, CDNs, or invented evidence.</li>
+    <li>Preserve the Markdown evaluation and overwrite only <code>reports/subagent-evaluation-report.html</code>.</li>
+    <li>Keep the report responsive, printable, keyboard-readable, and honest about unavailable evidence.</li>
+  </ul>
+
+  <h2>Task 1: Build the verified agent ledger</h2>
+  <ol>
+    <li>Read the approved design, progress ledger, task briefs/reports, commit history, and returned review findings.</li>
+    <li>Record every known Luna and Terra agent run, its assignment, output, measurable result, shortcomings, and evidence confidence.</li>
+    <li>Mark any unavailable discovery-agent output as unverified instead of inferring details.</li>
+  </ol>
+
+  <h2>Task 2: Rebuild the report</h2>
+  <ol>
+    <li>Replace the old page with the approved editorial cover, workflow map, roster, agent dossiers, comparison visuals, failure analysis, and future operating model.</li>
+    <li>Use CSS-only flow lines, bars, score rings, and task/findings graphics that encode labelled information.</li>
+    <li>Give each dossier consistent sections for assignment, usage, output, scoring, failures, evidence, and improvement measures.</li>
+  </ol>
+
+  <h2>Task 3: Verify the artifact</h2>
+  <ol>
+    <li>Check HTML headings and all named agent dossiers with <code>rg</code>.</li>
+    <li>Run <code>git diff --check -- reports/subagent-evaluation-report.html</code>; expect exit 0.</li>
+    <li>Confirm the file is self-contained by checking that it contains no external <code>http://</code> or <code>https://</code> references.</li>
+    <li>Inspect the rendered file locally if browser control is available; otherwise disclose that visual rendering was not automatically inspected.</li>
+  </ol>
+</body>
+</html>
