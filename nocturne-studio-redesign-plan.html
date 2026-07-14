@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hindsight — Nocturne Studio Redesign Plan</title>
+  <style>
+    :root { color-scheme: light; --ink:#1c211f; --muted:#59615d; --line:#d9dedb; --paper:#ffffff; --wash:#f5f7f5; --accent:#9c4f2f; --accent-wash:#fbf1ec; --good:#265e48; --warn:#825814; }
+    * { box-sizing: border-box; }
+    html { background: var(--wash); }
+    body { margin: 0; color: var(--ink); background: var(--wash); font: 15px/1.58 ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    a { color: var(--accent); }
+    header, main { width: min(1080px, calc(100% - 32px)); margin: 0 auto; }
+    header { padding: 52px 0 28px; border-bottom: 1px solid var(--line); }
+    main { padding: 28px 0 72px; }
+    h1, h2, h3 { line-height: 1.18; }
+    h1 { max-width: 760px; margin: 0; font: 500 clamp(32px, 5vw, 54px)/1.05 Georgia, serif; letter-spacing: -.035em; }
+    h2 { margin: 0 0 14px; font-size: 21px; }
+    h3 { margin: 0 0 8px; font-size: 16px; }
+    p { margin: 0 0 12px; }
+    code { font: 12.5px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    pre { margin: 12px 0 0; padding: 14px; overflow: auto; border: 1px solid #d3d9d5; border-radius: 8px; background: #f1f4f2; white-space: pre; }
+    ul, ol { margin: 8px 0 0; padding-left: 22px; }
+    li + li { margin-top: 6px; }
+    .eyebrow { margin: 0 0 10px; color: var(--accent); font-size: 11px; font-weight: 750; letter-spacing: .13em; text-transform: uppercase; }
+    .lede { max-width: 760px; margin: 18px 0 0; color: var(--muted); font-size: 17px; }
+    .meta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 22px; }
+    .pill { padding: 6px 9px; border: 1px solid var(--line); border-radius: 999px; background: var(--paper); color: var(--muted); font-size: 12px; }
+    .pill.waiting { border-color: #ddbea8; background: var(--accent-wash); color: var(--accent); font-weight: 700; }
+    section { margin-top: 34px; }
+    .callout { padding: 18px 20px; border-left: 4px solid var(--accent); background: var(--paper); }
+    .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+    .card { padding: 18px; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); }
+    .card p:last-child { margin-bottom: 0; }
+    .label { color: var(--muted); font-size: 11px; font-weight: 750; letter-spacing: .1em; text-transform: uppercase; }
+    table { width: 100%; border-collapse: collapse; border: 1px solid var(--line); background: var(--paper); }
+    th, td { padding: 11px 12px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+    th { background: #eef2ef; font-size: 12px; }
+    td:first-child { width: 22%; font-weight: 650; }
+    .task { margin-top: 16px; padding: 20px; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); }
+    .task-head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 12px; }
+    .task-no { color: var(--accent); font-size: 12px; font-weight: 800; letter-spacing: .08em; }
+    .files { margin: 12px 0; padding: 12px 14px; border-radius: 8px; background: #f3f5f3; font-size: 13px; }
+    .steps { counter-reset: step; list-style: none; padding: 0; }
+    .steps > li { position: relative; margin-top: 12px; padding-left: 30px; }
+    .steps > li::before { counter-increment: step; content: counter(step); position: absolute; top: 1px; left: 0; display: grid; place-items: center; width: 20px; height: 20px; border: 1px solid #c9cfcb; border-radius: 50%; color: var(--muted); font-size: 11px; font-weight: 700; }
+    .expected { color: var(--good); font-weight: 650; }
+    .risk { color: var(--warn); }
+    .checklist { columns: 2; column-gap: 28px; }
+    .checklist li { break-inside: avoid; }
+    .dependency { display: flex; flex-wrap: wrap; gap: 7px; align-items: center; }
+    .node { padding: 7px 9px; border: 1px solid var(--line); border-radius: 6px; background: white; font-size: 12px; font-weight: 650; }
+    .arrow { color: #8a918d; }
+    footer { margin-top: 40px; padding-top: 18px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; }
+    @media (max-width: 720px) { header { padding-top: 32px; } .grid { grid-template-columns: 1fr; } .checklist { columns: 1; } .task-head { display: block; } table { display: block; overflow-x: auto; } }
+    @media print { html, body { background: white; } header, main { width: 100%; } .task, .card { break-inside: avoid; } }
+  </style>
+</head>
+<body>
+  <header>
+    <p class="eyebrow">Implementation plan · awaiting approval</p>
+    <h1>Hindsight: Nocturne Studio redesign</h1>
+    <p class="lede">A complete dark-first redesign of the chat workspace, interaction states, conversation navigation, tool activity, and memory management—while preserving the existing persistence, streaming, context, and safety architecture.</p>
+    <div class="meta">
+      <span class="pill waiting">No production work before approval</span>
+      <span class="pill">Prepared 14 July 2026</span>
+      <span class="pill">Next.js 15 · React 19 · TypeScript · Tailwind 4</span>
+      <span class="pill">Runtime: Bun · package manager: pnpm</span>
+    </div>
+  </header>
+
+  <main>
+    <section class="callout" aria-labelledby="agent-note">
+      <h2 id="agent-note">Agent execution contract</h2>
+      <p><strong>For agentic workers:</strong> implementation must use the subagent-driven development workflow after this plan is approved. A fresh coding agent receives one bounded task, the root agent reviews its diff and verification evidence, and only then does the next dependent task begin.</p>
+      <p>No subagent may delete files. Luna is reserved for low-complexity reading or verification summaries, Terra for substantial code generation, and Sol will not be used. The root agent owns shared-file integration, temporary-file cleanup, final browser verification, and all completion claims.</p>
+    </section>
+
+    <section aria-labelledby="understanding">
+      <h2 id="understanding">Current understanding and locked decisions</h2>
+      <div class="grid">
+        <article class="card">
+          <p class="label">Selected identity</p>
+          <h3>Nocturne Studio</h3>
+          <p>Cinematic dark surfaces, editorial typography, warm apricot action color, quiet green success states, restrained borders, and purposeful motion.</p>
+        </article>
+        <article class="card">
+          <p class="label">Scope</p>
+          <h3>Visual system plus UX completion</h3>
+          <p>The work includes multiline input, stop/regenerate, tool details, grouped history, recovery states, accessible mobile navigation, and improved memory controls.</p>
+        </article>
+        <article class="card">
+          <p class="label">Theme assumption</p>
+          <h3>Dark-first and dark-only in this pass</h3>
+          <p>A light theme is excluded so the selected design remains coherent. Semantic tokens will keep a future light palette possible without restructuring components.</p>
+        </article>
+        <article class="card">
+          <p class="label">Preserved architecture</p>
+          <h3>Database remains the source of truth</h3>
+          <p>Lazy conversation creation, shallow URL replacement, streaming, context budgets, compaction, long-term memory, five-step tool cap, and no automatic model retry remain intact.</p>
+        </article>
+      </div>
+    </section>
+
+    <section aria-labelledby="non-goals">
+      <h2 id="non-goals">Explicit non-goals</h2>
+      <ul>
+        <li>No attachments, conversation sharing, history search, model selector, authentication, or new AI tools.</li>
+        <li>No Prisma schema migration. Historical tool UI will reconstruct from the existing <code>toolCalls</code> and <code>toolCallId</code> fields.</li>
+        <li>No light theme in this plan.</li>
+        <li>No replacement of tRPC, Prisma, AI SDK, React Markdown, or the existing provider.</li>
+        <li>No claim that a saved memory was used in a response unless the server records that fact. The context panel will say “Saved memories,” not “Memories used.”</li>
+      </ul>
+    </section>
+
+    <section aria-labelledby="system">
+      <h2 id="system">Nocturne design system</h2>
+      <table>
+        <thead><tr><th>Area</th><th>Decision</th></tr></thead>
+        <tbody>
+          <tr><td>Palette</td><td><code>#0C0D0D</code> canvas, <code>#131411</code> surface, <code>#1B1C19</code> raised, <code>#F4EEE4</code> primary text, <code>#C7C2B9</code> secondary text, <code>#94958E</code> muted text, <code>#F09A68</code> accent, <code>#9FBE98</code> success, <code>#ED8B87</code> danger, <code>#2A2B27</code> hairline.</td></tr>
+          <tr><td>Typography</td><td>Geist for controls and metadata. Newsreader normal/italic for page headings and deliberate editorial moments. Body copy remains at least 16px on mobile with 1.55–1.75 line height.</td></tr>
+          <tr><td>Desktop layout</td><td>272px conversation rail, flexible main column with 720px reading measure, and a 248px collapsible saved-memory rail at 1280px and wider.</td></tr>
+          <tr><td>Tablet layout</td><td>240px conversation rail plus main canvas. Saved-memory context opens as an accessible right sheet.</td></tr>
+          <tr><td>Mobile layout</td><td>Single main canvas. Conversation navigation and saved-memory context use modal sheets with Escape, focus restoration, body scroll lock, and safe-area padding.</td></tr>
+          <tr><td>Interaction</td><td>44px minimum touch targets, no hover-only actions, visible focus rings, 150–240ms transform/opacity motion, and a complete reduced-motion override.</td></tr>
+          <tr><td>Messages</td><td>User prompts remain compact raised bubbles. Assistant responses stay open-text, with a clearer editorial lead, richer Markdown, code-copy controls, and persistent message actions on touch.</td></tr>
+          <tr><td>Feedback</td><td>Inline status panels distinguish offline, rate limit, credential, provider, mutation, and unknown errors; each state includes a specific recovery action.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section aria-labelledby="architecture">
+      <h2 id="architecture">Component and data boundaries</h2>
+      <table>
+        <thead><tr><th>File</th><th>Responsibility</th></tr></thead>
+        <tbody>
+          <tr><td><code>globals.css</code></td><td>Semantic Nocturne tokens, Markdown rules, motion tokens, reduced-motion policy, scrollbars, and reusable visual utilities.</td></tr>
+          <tr><td><code>appShell.tsx</code> + <code>modal-sheet.tsx</code></td><td>Responsive frame, top bar, accessible navigation/context sheets, and focus/scroll behavior.</td></tr>
+          <tr><td><code>sidebar.tsx</code> + <code>conversation-groups.ts</code></td><td>tRPC controller plus pure date grouping/formatting and presentational conversation states.</td></tr>
+          <tr><td><code>chat.tsx</code></td><td>Conversation lifecycle and AI SDK orchestration only: create, send, regenerate, stop, retry, and query invalidation.</td></tr>
+          <tr><td><code>chat-composer.tsx</code></td><td>Multiline input, Enter/Shift+Enter behavior, auto-growth, busy/stop state, and offline state.</td></tr>
+          <tr><td><code>message-list.tsx</code> + <code>markdown-message.tsx</code></td><td>Message layout, Markdown component mapping, code copy, actions, streaming announcements, and jump-to-latest behavior.</td></tr>
+          <tr><td><code>tool-activity.tsx</code></td><td>Normalization and expandable presentation of live and restored tool parts.</td></tr>
+          <tr><td><code>chat-feedback.tsx</code> + <code>chat-error.ts</code></td><td>Error classification, countdown, accessible announcements, and recovery controls.</td></tr>
+          <tr><td><code>context-panel.tsx</code></td><td>Latest saved memories, memory count, privacy explanation, loading/error states, and settings navigation.</td></tr>
+          <tr><td><code>chatStore.ts</code> + <code>regeneration.ts</code></td><td>Stored-row to UI-message reconstruction and safe last-response replacement without duplicating the user prompt.</td></tr>
+        </tbody>
+      </table>
+      <div class="dependency" style="margin-top:14px" aria-label="Task dependency order">
+        <span class="node">1 Foundation</span><span class="arrow">→</span>
+        <span class="node">2 Navigation</span><span class="arrow">→</span>
+        <span class="node">3 Server contracts</span><span class="arrow">→</span>
+        <span class="node">4 Chat controls</span><span class="arrow">→</span>
+        <span class="node">5 Messages + tools</span><span class="arrow">→</span>
+        <span class="node">6 Memory</span><span class="arrow">→</span>
+        <span class="node">7 A11y polish</span><span class="arrow">→</span>
+        <span class="node">8 Verification</span>
+      </div>
+    </section>
+
+    <section aria-labelledby="tasks">
+      <h2 id="tasks">Implementation tasks</h2>
+
+      <article class="task">
+        <div class="task-head"><h3>Testing harness, Nocturne tokens, and accessible shell</h3><span class="task-no">Task 1 · Terra</span></div>
+        <p><strong>Deliverable:</strong> the existing app runs inside the final Nocturne shell, with reusable accessible modal sheets and no feature behavior changed.</p>
+        <div class="files"><strong>Modify:</strong> <code>package.json</code>, <code>pnpm-lock.yaml</code>, <code>src/styles/globals.css</code>, <code>src/app/layout.tsx</code>, <code>src/app/_components/appShell.tsx</code>, <code>src/app/_components/icons.tsx</code><br><strong>Create:</strong> <code>bunfig.toml</code>, <code>src/test/setup.ts</code>, <code>src/app/_components/modal-sheet.tsx</code>, <code>src/app/_components/__tests__/modal-sheet.test.tsx</code></div>
+        <p><strong>Interface:</strong> <code>ModalSheet({ open, side, title, triggerRef, onClose, children })</code>, where <code>side</code> is <code>"left" | "right"</code>.</p>
+        <ol class="steps">
+          <li>Install the test-only DOM dependencies with <code>pnpm add -D @happy-dom/global-registrator @testing-library/react @testing-library/user-event</code>. Configure Bun to preload <code>src/test/setup.ts</code>.</li>
+          <li>Write tests proving that the sheet has <code>role="dialog"</code>, closes on Escape or scrim activation, restores focus to <code>triggerRef</code>, and removes body scroll lock on unmount.</li>
+          <li>Run <code>pnpm test src/app/_components/__tests__/modal-sheet.test.tsx</code>. <span class="expected">Expected: FAIL because <code>modal-sheet.tsx</code> does not exist.</span></li>
+          <li>Implement <code>ModalSheet</code>, then replace the current mobile drawer with it. Add <code>aria-expanded</code>, <code>aria-controls</code>, route-change close behavior, and a skip-to-content link.</li>
+          <li>Replace the global palette and font configuration with the exact Nocturne values above. Expand Newsreader to normal and italic styles, preserve semantic token names, and add new motion/elevation tokens without raw colors in components.</li>
+          <li>Run the focused test, <code>pnpm typecheck</code>, and <code>pnpm test</code>. <span class="expected">Expected: all exit 0.</span></li>
+          <li>Root agent reviews keyboard order, diff scope, and token contrast before committing <code>design: establish Nocturne shell and tokens</code>.</li>
+        </ol>
+      </article>
+
+      <article class="task">
+        <div class="task-head"><h3>Conversation rail, grouped history, and safe row actions</h3><span class="task-no">Task 2 · Terra</span></div>
+        <p><strong>Deliverable:</strong> a redesigned navigation rail with Today/Yesterday/Earlier grouping, timestamps, skeleton/error/empty states, and touch-accessible rename/delete controls.</p>
+        <div class="files"><strong>Modify:</strong> <code>src/app/_components/sidebar.tsx</code>, <code>src/app/_components/icons.tsx</code><br><strong>Create:</strong> <code>src/app/_components/conversation-groups.ts</code>, <code>src/app/_components/__tests__/conversation-groups.test.ts</code>, <code>src/app/_components/sidebar-view.tsx</code>, <code>src/app/_components/__tests__/sidebar-view.test.tsx</code></div>
+        <pre><code>export type ConversationGroupLabel = "Today" | "Yesterday" | "Earlier";
+export function groupConversations(
+  items: Array&lt;{ id: string; title: string; updatedAt: Date }&gt;,
+  now: Date,
+): Array&lt;{ label: ConversationGroupLabel; items: ConversationListItem[] }&gt;;</code></pre>
+        <ol class="steps">
+          <li>Write deterministic tests using <code>now = new Date("2026-07-14T12:00:00+05:30")</code> to prove group boundaries, newest-first order, and locale-aware timestamp labels.</li>
+          <li>Run <code>pnpm test src/app/_components/__tests__/conversation-groups.test.ts</code>. <span class="expected">Expected: FAIL because the grouping module does not exist.</span></li>
+          <li>Implement the pure grouping module. Keep tRPC access in <code>sidebar.tsx</code>; pass loading, error, items, and mutation callbacks into <code>SidebarView</code>.</li>
+          <li>Write interaction tests proving row actions are keyboard reachable without hover, Enter saves rename, Escape cancels, delete requires confirmation, pending mutations disable repetition, and failures remain visible.</li>
+          <li>Implement the Nocturne rail at 272px desktop/240px tablet with <code>aria-current="page"</code>, a labeled <code>nav</code>, 44px action hit areas, skeleton rows, and specific retry UI.</li>
+          <li>Run focused tests, <code>pnpm typecheck</code>, and <code>pnpm test</code>. <span class="expected">Expected: all exit 0.</span></li>
+          <li>Root agent reviews desktop, mobile-sheet, touch, and keyboard states before committing <code>design: rebuild conversation navigation</code>.</li>
+        </ol>
+      </article>
+
+      <article class="task">
+        <div class="task-head"><h3>Regeneration and historical tool data contracts</h3><span class="task-no">Task 3 · Terra</span></div>
+        <p><strong>Deliverable:</strong> regenerate replaces only the latest response without duplicating the user prompt, and stored tool calls return after refresh.</p>
+        <div class="files"><strong>Modify:</strong> <code>src/app/api/chat/route.ts</code>, <code>src/server/ai/assembleContext.ts</code>, <code>src/server/ai/chatStore.ts</code>, <code>src/server/ai/toolStore.ts</code><br><strong>Create:</strong> <code>src/server/ai/regeneration.ts</code>, <code>src/server/ai/__tests__/regeneration.test.ts</code>, <code>src/server/ai/__tests__/uiMessages.test.ts</code></div>
+        <pre><code>type ChatRequest =
+  | { action: "send"; conversationId: string; message: UIMessage }
+  | { action: "regenerate"; conversationId: string };
+
+export function rowsForGeneration(
+  rows: HistoryRow[],
+  action: ChatRequest["action"],
+): HistoryRow[];
+
+export function storedRowsToUIMessages(rows: StoredMessageRow[]): UIMessage[];</code></pre>
+        <ol class="steps">
+          <li>Write a failing test showing <code>rowsForGeneration</code> keeps all rows for <code>send</code> but cuts a regenerate context immediately after the latest user row.</li>
+          <li>Write a failing reconstruction test showing an assistant <code>toolCalls</code> row plus its linked tool row becomes a <code>dynamic-tool</code> UI part with <code>state: "output-available"</code>, parsed input/output, and the original <code>toolCallId</code>.</li>
+          <li>Run <code>pnpm test src/server/ai/__tests__/regeneration.test.ts src/server/ai/__tests__/uiMessages.test.ts</code>. <span class="expected">Expected: FAIL because both helpers are missing.</span></li>
+          <li>Implement the discriminated request schema. A send persists the new user prompt; a regenerate skips user persistence and assembles context through the latest user row.</li>
+          <li>On successful regeneration, use one Prisma transaction to list the response rows after the latest user, delete those IDs, persist replacement tool activity, and persist the replacement assistant text. On generation failure, leave the old database response untouched.</li>
+          <li>Refactor persistence helpers to accept the default Prisma client or a transaction client. Do not change the schema or the five-step tool cap.</li>
+          <li>Load user, assistant, and tool rows in chronological order and pass them through <code>storedRowsToUIMessages</code>; do not surface raw tool rows as standalone chat messages.</li>
+          <li>Run both focused tests, the existing context tests, <code>pnpm typecheck</code>, and <code>pnpm test</code>. <span class="expected">Expected: all exit 0 and the existing 32K budget invariants remain green.</span></li>
+          <li>Root agent reviews database replacement semantics before committing <code>feat: support safe response regeneration</code>.</li>
+        </ol>
+      </article>
+
+      <article class="task">
+        <div class="task-head"><h3>Multiline composer, stop control, and recovery state</h3><span class="task-no">Task 4 · Terra</span></div>
+        <p><strong>Deliverable:</strong> a Nocturne composer that handles long prompts, stops streaming, retries failures, and explains offline/rate-limited states.</p>
+        <div class="files"><strong>Modify:</strong> <code>src/app/_components/chat.tsx</code>, <code>src/app/_components/icons.tsx</code><br><strong>Create:</strong> <code>src/app/_components/chat-composer.tsx</code>, <code>src/app/_components/chat-feedback.tsx</code>, <code>src/app/_components/chat-error.ts</code>, <code>src/app/_components/use-network-status.ts</code>, <code>src/app/_components/__tests__/chat-composer.test.tsx</code>, <code>src/app/_components/__tests__/chat-error.test.ts</code></div>
+        <pre><code>interface ChatComposerProps {
+  value: string;
+  busy: boolean;
+  offline: boolean;
+  onChange(value: string): void;
+  onSubmit(): void;
+  onStop(): void;
+}
+
+type ChatErrorKind = "rate-limit" | "credentials" | "provider" | "offline" | "unknown";
+export function classifyChatError(message: string, online: boolean): ChatErrorKind;</code></pre>
+        <ol class="steps">
+          <li>Write interaction tests proving Enter submits, Shift+Enter inserts a newline, blank input does not submit, busy mode exposes Stop, and offline mode disables Send with readable feedback.</li>
+          <li>Write pure classification tests for the existing friendly 429, credential, provider, and unknown messages plus browser-offline precedence.</li>
+          <li>Run the focused tests. <span class="expected">Expected: FAIL because the composer and classifier are missing.</span></li>
+          <li>Implement the textarea composer with CSS content sizing capped at 200px, mobile-safe 16px text, <code>aria-describedby</code> help text, and 44px send/stop controls.</li>
+          <li>Use <code>useChat</code>’s real <code>stop</code>, <code>regenerate</code>, and <code>clearError</code> helpers. In <code>prepareSendMessagesRequest</code>, map AI SDK trigger <code>submit-message</code> to <code>action: "send"</code> and <code>regenerate-message</code> to <code>action: "regenerate"</code>.</li>
+          <li>Implement a 60-second client countdown for the known rate-limit message, a retry action after zero, provider/credential guidance, and an online/offline listener with cleanup.</li>
+          <li>Keep lazy conversation creation and shallow URL replacement unchanged. Surface create-conversation failure without clearing the draft.</li>
+          <li>Run focused tests, <code>pnpm typecheck</code>, and <code>pnpm test</code>. <span class="expected">Expected: all exit 0.</span></li>
+          <li>Root agent reviews request bodies against the route schema before committing <code>feat: complete chat composer controls</code>.</li>
+        </ol>
+      </article>
+
+      <article class="task">
+        <div class="task-head"><h3>Message presentation, Markdown actions, and tool activity</h3><span class="task-no">Task 5 · Terra</span></div>
+        <p><strong>Deliverable:</strong> the selected Nocturne conversation surface, including code copy, regenerate, tool expansion, streaming announcements, and respectful scroll behavior.</p>
+        <div class="files"><strong>Modify:</strong> <code>src/app/_components/chat.tsx</code>, <code>src/styles/globals.css</code><br><strong>Create:</strong> <code>src/app/_components/message-list.tsx</code>, <code>src/app/_components/markdown-message.tsx</code>, <code>src/app/_components/code-block.tsx</code>, <code>src/app/_components/tool-activity.tsx</code>, <code>src/app/_components/use-stick-to-bottom.ts</code>, <code>src/app/_components/__tests__/tool-activity.test.ts</code>, <code>src/app/_components/__tests__/code-block.test.tsx</code>, <code>src/app/_components/__tests__/stick-to-bottom.test.ts</code></div>
+        <pre><code>export interface ToolActivityViewModel {
+  id: string;
+  name: string;
+  status: "running" | "complete" | "failed";
+  input: unknown;
+  output?: unknown;
+  errorText?: string;
+}
+
+export function toolPartToViewModel(part: UIMessagePart): ToolActivityViewModel | null;</code></pre>
+        <ol class="steps">
+          <li>Write failing normalization tests for live static tool parts and restored dynamic-tool parts in input-streaming, output-available, and output-error states.</li>
+          <li>Write failing component tests for code-copy success text and a failing scroll-policy test showing auto-scroll stops after the user leaves the bottom threshold.</li>
+          <li>Run the three focused test files. <span class="expected">Expected: FAIL because the new modules do not exist.</span></li>
+          <li>Implement a 720px reading measure, editorial headings, open assistant text, compact user bubbles, readable long-word wrapping, and message actions that remain reachable on keyboard and touch.</li>
+          <li>Map React Markdown code nodes into <code>CodeBlock</code> with language label, horizontal overflow, copy button, and <code>aria-live="polite"</code> success feedback.</li>
+          <li>Render each tool as a semantic <code>details</code> block with humanized name, state icon/text, pretty-printed input/output, and failure copy. Avoid internal-name-only pills.</li>
+          <li>Show a Jump to latest control when the reader scrolls away from the bottom. Auto-follow only while the reader remains within the threshold.</li>
+          <li>Expose Stop during streaming and Regenerate on the latest completed assistant message. Announce thinking, completion, errors, and copied state through appropriate live regions.</li>
+          <li>Run focused tests, <code>pnpm typecheck</code>, and <code>pnpm test</code>. <span class="expected">Expected: all exit 0.</span></li>
+          <li>Root agent reviews live and refreshed tool parity before committing <code>design: rebuild message and tool presentation</code>.</li>
+        </ol>
+      </article>
+
+      <article class="task">
+        <div class="task-head"><h3>Saved-memory rail and memory-management screen</h3><span class="task-no">Task 6 · Terra</span></div>
+        <p><strong>Deliverable:</strong> the Nocturne context rail and a complete settings experience with clear, reversible interaction states.</p>
+        <div class="files"><strong>Modify:</strong> <code>src/app/settings/page.tsx</code>, <code>src/app/_components/appShell.tsx</code>, <code>src/server/api/routers/memory.ts</code><br><strong>Create:</strong> <code>src/app/_components/context-panel.tsx</code>, <code>src/app/_components/memory-card.tsx</code>, <code>src/app/_components/__tests__/memory-card.test.tsx</code></div>
+        <ol class="steps">
+          <li>Write failing tests proving Forget first enters confirmation, Cancel restores the row, Confirm disables repeat activation, mutation failure restores controls, and success announces completion.</li>
+          <li>Run <code>pnpm test src/app/_components/__tests__/memory-card.test.tsx</code>. <span class="expected">Expected: FAIL because <code>MemoryCard</code> does not exist.</span></li>
+          <li>Implement the 248px desktop saved-memory rail using the existing memory list query. Display the count, three newest facts, categories, loading/error/empty states, privacy copy, and a link to Settings.</li>
+          <li>Below 1280px, open the same content in <code>ModalSheet side="right"</code>. Ensure the top-bar button has <code>aria-expanded</code> and a 44px target.</li>
+          <li>Rebuild Settings with a clear explanation, category labels, locale-aware dates, confirmation, pending/error feedback, and a useful empty state. Keep ownership-scoped deletion unchanged.</li>
+          <li>Add a memory-count response only if the existing list payload would otherwise be duplicated; prefer deriving the count from the current query.</li>
+          <li>Run focused tests, <code>pnpm typecheck</code>, and <code>pnpm test</code>. <span class="expected">Expected: all exit 0.</span></li>
+          <li>Root agent checks that the UI says “saved,” never falsely claims “used,” then commits <code>design: rebuild saved memory experience</code>.</li>
+        </ol>
+      </article>
+
+      <article class="task">
+        <div class="task-head"><h3>Responsive, accessibility, and motion audit</h3><span class="task-no">Task 7 · Luna audit + Terra fixes</span></div>
+        <p><strong>Deliverable:</strong> all redesigned states work at phone, tablet, laptop, and wide desktop widths with keyboard, touch, screen reader semantics, and reduced motion.</p>
+        <div class="files"><strong>Review and minimally fix:</strong> all changed <code>.tsx</code> files and <code>src/styles/globals.css</code></div>
+        <ol class="steps">
+          <li>Luna performs a read-only checklist against contrast, heading order, labels, <code>aria-current</code>, live regions, focus visibility, target size, long content, locale formatting, and reduced motion. Luna receives no deletion authority.</li>
+          <li>Root converts every validated finding into a bounded fix request; Terra applies fixes only within the affected files.</li>
+          <li>At 390×844, verify no horizontal page scroll, a 16px composer, safe-area padding, reachable row actions, modal focus containment, and no automatic keyboard summon on first load.</li>
+          <li>At 768×1024, verify the navigation rail and context sheet do not compete for focus or width.</li>
+          <li>At 1440×900, verify the 272/flexible/248 composition, 60–75-character response measure, sticky composer clearance, and grouped conversation scanability.</li>
+          <li>Enable <code>prefers-reduced-motion: reduce</code> and verify drawer, sheet, thinking, hover, and press effects stop or become instantaneous.</li>
+          <li>Run <code>pnpm typecheck</code> and <code>pnpm test</code>. <span class="expected">Expected: both exit 0 before any audit fix is accepted.</span></li>
+          <li>Commit the bounded corrections as <code>fix: close Nocturne accessibility gaps</code>.</li>
+        </ol>
+      </article>
+
+      <article class="task">
+        <div class="task-head"><h3>Production verification and documentation handoff</h3><span class="task-no">Task 8 · Root</span></div>
+        <p><strong>Deliverable:</strong> evidence that the redesign builds, preserves core flows, and is ready for the user’s final review.</p>
+        <div class="files"><strong>Modify after evidence exists:</strong> <code>STATUS.md</code>, <code>README.md</code>, <code>.gitignore</code><br><strong>Root-only cleanup:</strong> temporary <code>.superpowers/</code> mockup session, after the user confirms it is no longer needed</div>
+        <ol class="steps">
+          <li>Run <code>pnpm test</code>. Record the exact passing test count and any skipped tests.</li>
+          <li>Run <code>pnpm typecheck</code>. <span class="expected">Expected: exit 0 with no diagnostics.</span></li>
+          <li>Run <code>pnpm build</code>. <span class="expected">Expected: production build exits 0.</span></li>
+          <li>Start <code>pnpm dev</code> and verify: lazy first send, shallow URL update, streaming, stop, regenerate, refresh restoration, tool expansion before/after refresh, conversation rename/delete, navigation grouping, memory forget confirmation, mobile drawers, offline state, and rate-limit recovery.</li>
+          <li>Run <code>bun scripts/verify-live.ts</code> only when the model endpoint is available. Exit 2 remains an upstream-rate-limit result; it must not be misreported as a design failure or a pass.</li>
+          <li>Capture desktop and mobile screenshots for final visual comparison against Nocturne Studio. Review console output for runtime errors and hydration warnings.</li>
+          <li>Update <code>STATUS.md</code> and the README design/status sections with only freshly verified results. Do not change the pending five live checks without actual pass evidence.</li>
+          <li>Add <code>.superpowers/</code> to <code>.gitignore</code>. The root agent removes the temporary picker only after confirming the user no longer needs it; subagents never delete it.</li>
+          <li>Run <code>git diff --check</code>, <code>git status --short</code>, and the full test/typecheck/build gate once more before any completion claim.</li>
+        </ol>
+      </article>
+    </section>
+
+    <section aria-labelledby="criteria">
+      <h2 id="criteria">Approval and success criteria</h2>
+      <ul class="checklist">
+        <li>Nocturne Studio visual identity is consistent across chat, navigation, tools, feedback, and settings.</li>
+        <li>All existing product flows and ownership boundaries remain intact.</li>
+        <li>Regenerate never duplicates the last user message and failed regeneration does not destroy the stored response.</li>
+        <li>Historical tool activity looks equivalent to live tool activity after refresh.</li>
+        <li>No critical action depends on hover.</li>
+        <li>Keyboard focus is visible and restored after sheets close.</li>
+        <li>Normal text meets 4.5:1 contrast; UI boundaries meet 3:1 where required.</li>
+        <li>Interactive targets are at least 44×44px on touch layouts.</li>
+        <li>Long prompts, code, tables, and tool output cannot break the mobile layout.</li>
+        <li>Reduced-motion preferences are honored globally.</li>
+        <li>Tests, typecheck, and production build pass with fresh evidence.</li>
+        <li>The remaining upstream live checks retain truthful pending/pass status.</li>
+      </ul>
+    </section>
+
+    <section aria-labelledby="risks">
+      <h2 id="risks">Risks and controls</h2>
+      <table>
+        <thead><tr><th>Risk</th><th>Control</th></tr></thead>
+        <tbody>
+          <tr><td class="risk">Regenerate corrupts history</td><td>Generate against a view truncated after the latest user, then replace the stored tail in one transaction only after generation succeeds.</td></tr>
+          <tr><td class="risk">Tool UI differs after refresh</td><td>Use one <code>ToolActivityViewModel</code> normalizer for both AI SDK static parts and restored dynamic parts, with parity tests.</td></tr>
+          <tr><td class="risk">Large redesign creates merge conflicts</td><td>Sequence tasks by shared-file dependency. Each coding agent gets an explicit file set; root reviews and integrates before the next overlapping task.</td></tr>
+          <tr><td class="risk">Visual polish hides accessibility regressions</td><td>Accessibility requirements are acceptance gates, not a final optional pass; Task 7 independently audits every changed surface.</td></tr>
+          <tr><td class="risk">Free model blocks end-to-end verification</td><td>Separate deterministic UI/data verification from live-provider checks and report exit 2 as rate limiting, never as success.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <footer>
+      <p><strong>Approval effect:</strong> approving this plan authorizes implementation of the listed files and behaviors using subagents under the stated restrictions. It does not authorize deployment, pushing, pull-request creation, dependency upgrades beyond the three test-only packages, or unrelated refactoring.</p>
+    </footer>
+  </main>
+</body>
+</html>

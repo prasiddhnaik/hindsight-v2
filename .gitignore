@@ -68,3 +68,7 @@ yarn-error.log*
 
 # live-verification progress state
 .verify-live-state.json
+
+# local agent workspaces and design scratch
+.worktrees/
+.superpowers/
