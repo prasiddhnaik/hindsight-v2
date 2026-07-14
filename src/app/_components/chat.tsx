@@ -2,15 +2,14 @@
 
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
-import { useEffect, useMemo, useRef, useState } from "react";
-import Markdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import { useMemo, useRef, useState } from "react";
 
 import { ChatComposer } from "~/app/_components/chat-composer";
 import { RATE_LIMIT_MESSAGE } from "~/app/_components/chat-error";
 import { ChatFeedback } from "~/app/_components/chat-feedback";
-import { CheckIcon, CopyIcon, WrenchIcon } from "~/app/_components/icons";
+import { MessageList } from "~/app/_components/message-list";
 import { useNetworkStatus } from "~/app/_components/use-network-status";
+import { useStickToBottom } from "~/app/_components/use-stick-to-bottom";
 import { api } from "~/trpc/react";
 
 const SUGGESTIONS = [
@@ -43,29 +42,6 @@ export function buildChatRequestBody({
     .reverse()
     .find(({ role }) => role === "user")!;
   return { action: "send" as const, conversationId, message };
-}
-
-function CopyButton({ text }: { text: string }) {
-  const [copied, setCopied] = useState(false);
-  return (
-    <button
-      onClick={() => {
-        void navigator.clipboard.writeText(text).then(() => {
-          setCopied(true);
-          setTimeout(() => setCopied(false), 1500);
-        });
-      }}
-      aria-label={copied ? "Copied" : "Copy message"}
-      title="Copy"
-      className="flex size-7 items-center justify-center rounded-md text-ink-muted opacity-0 transition-all duration-150 group-hover:opacity-100 hover:bg-surface hover:text-ink focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-accent/60 focus-visible:outline-none"
-    >
-      {copied ? (
-        <CheckIcon className="size-3.5 text-accent" />
-      ) : (
-        <CopyIcon className="size-3.5" />
-      )}
-    </button>
-  );
 }
 
 export function Chat({ conversationId, initialMessages }: ChatProps) {
@@ -115,6 +91,14 @@ export function Chat({ conversationId, initialMessages }: ChatProps) {
   });
 
   const isBusy = status === "submitted" || status === "streaming";
+  const messageContentVersion = useMemo(
+    () => `${status}:${JSON.stringify(messages)}`,
+    [messages, status],
+  );
+  const { showJumpToLatest, jumpToLatest } = useStickToBottom(
+    scrollRef,
+    messageContentVersion,
+  );
   const feedbackMessage =
     creationError ??
     (error
@@ -134,11 +118,6 @@ export function Chat({ conversationId, initialMessages }: ChatProps) {
     rateLimitCooldownRef.current = null;
   }
   const rateLimitDeadline = rateLimitCooldownRef.current?.deadline ?? null;
-
-  // Keep the newest message in view while streaming.
-  useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
-  }, [messages, status]);
 
   async function send(text: string) {
     const message = text.trim();
@@ -168,15 +147,15 @@ export function Chat({ conversationId, initialMessages }: ChatProps) {
   }
 
   return (
-    <main className="flex min-h-0 min-w-0 flex-1 flex-col">
+    <main className="relative flex min-h-0 min-w-0 flex-1 flex-col">
       <div ref={scrollRef} className="flex-1 overflow-y-auto">
-        <div className="mx-auto w-full max-w-2xl px-4 py-8 md:px-6 md:py-10">
+        <div className="mx-auto w-full max-w-[720px] px-4 py-8 md:px-6 md:py-10">
           {messages.length === 0 && (
             <div className="flex flex-col items-center pt-[14vh] text-center md:pt-[18vh]">
-              <h1 className="font-display text-[28px] leading-tight text-ink italic md:text-[32px]">
+              <h1 className="font-display text-[30px] leading-tight text-ink italic md:text-[34px]">
                 What can I help with?
               </h1>
-              <p className="mt-3 text-base text-ink-muted md:text-sm">
+              <p className="mt-3 max-w-md text-base text-ink-muted">
                 Ask anything — I remember what matters across conversations.
               </p>
               <div className="mt-8 flex flex-wrap justify-center gap-2">
@@ -184,7 +163,7 @@ export function Chat({ conversationId, initialMessages }: ChatProps) {
                   <button
                     key={s}
                     onClick={() => void send(s)}
-                    className="rounded-full border border-hairline px-3.5 py-2.5 text-base text-ink-secondary transition-colors duration-150 hover:border-accent/40 hover:text-ink focus-visible:ring-2 focus-visible:ring-accent/60 focus-visible:outline-none md:py-1.5 md:text-[13px]"
+                    className="min-h-11 rounded-full border border-hairline px-4 text-base text-ink-secondary transition-colors duration-150 hover:border-accent/40 hover:text-ink focus-visible:ring-2 focus-visible:ring-accent/60 focus-visible:outline-none md:text-sm"
                   >
                     {s}
                   </button>
@@ -193,59 +172,19 @@ export function Chat({ conversationId, initialMessages }: ChatProps) {
             </div>
           )}
 
-          <div className="space-y-7">
-            {messages.map((message) => {
-              const text = message.parts
-                .map((part) => (part.type === "text" ? part.text : ""))
-                .join("");
-              const tools = message.parts
-                .filter((part) => part.type.startsWith("tool-"))
-                .map((part) => part.type.replace("tool-", ""));
+          <MessageList
+            messages={messages}
+            status={status}
+            error={error}
+            onCopyMessage={(_messageId, text) =>
+              navigator.clipboard.writeText(text)
+            }
+            onRegenerate={(messageId) => {
+              void regenerate({ messageId });
+            }}
+          />
 
-              if (message.role === "user") {
-                return (
-                  <div key={message.id} className="flex justify-end">
-                    <div className="max-w-[80%] rounded-2xl rounded-br-md bg-raised px-4 py-2.5">
-                      <p className="text-[15px] leading-relaxed whitespace-pre-wrap">
-                        {text}
-                      </p>
-                    </div>
-                  </div>
-                );
-              }
-
-              return (
-                <div key={message.id} className="group">
-                  {tools.length > 0 && (
-                    <p className="mb-2 inline-flex items-center gap-1.5 rounded-full border border-hairline px-2.5 py-1 text-[11.5px] text-ink-muted">
-                      <WrenchIcon className="size-3" />
-                      {tools.join(", ")}
-                    </p>
-                  )}
-                  <div className="markdown text-[15px] leading-7 text-ink">
-                    <Markdown remarkPlugins={[remarkGfm]}>{text}</Markdown>
-                  </div>
-                  {text && (
-                    <div className="mt-1.5 flex">
-                      <CopyButton text={text} />
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-
-            {status === "submitted" && (
-              <div
-                data-testid="streaming-indicator"
-                className="flex items-center gap-1 pt-1"
-                aria-label="Assistant is thinking"
-              >
-                <span className="thinking-dot size-1.5 rounded-full bg-ink-secondary" />
-                <span className="thinking-dot size-1.5 rounded-full bg-ink-secondary" />
-                <span className="thinking-dot size-1.5 rounded-full bg-ink-secondary" />
-              </div>
-            )}
-
+          <div className="mt-4">
             {online && feedbackMessage && (
               <ChatFeedback
                 message={feedbackMessage}
@@ -265,8 +204,20 @@ export function Chat({ conversationId, initialMessages }: ChatProps) {
         </div>
       </div>
 
+      {showJumpToLatest && (
+        <div className="pointer-events-none absolute inset-x-0 bottom-32 flex justify-center px-4">
+          <button
+            type="button"
+            onClick={jumpToLatest}
+            className="pointer-events-auto min-h-11 rounded-full border border-hairline bg-raised px-4 text-sm text-ink shadow-lift transition-transform duration-150 hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-accent/60 focus-visible:outline-none"
+          >
+            Jump to latest
+          </button>
+        </div>
+      )}
+
       <div className="px-4 pb-[max(1rem,env(safe-area-inset-bottom))] md:px-6">
-        <div className="mx-auto w-full max-w-2xl">
+        <div className="mx-auto w-full max-w-[720px]">
           <ChatComposer
             value={input}
             busy={isBusy}
@@ -276,7 +227,7 @@ export function Chat({ conversationId, initialMessages }: ChatProps) {
             onStop={() => void stop()}
           />
         </div>
-        <p className="mx-auto mt-2 max-w-2xl text-center text-base text-ink-muted md:text-[11px]">
+        <p className="mx-auto mt-2 max-w-[720px] text-center text-base text-ink-muted md:text-[11px]">
           Gemma 4 · free tier — replies can be rate-limited at busy times
         </p>
       </div>
