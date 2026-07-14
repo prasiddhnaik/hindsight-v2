@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 export interface ModalSheetProps {
@@ -29,6 +29,7 @@ export function ModalSheet({
   onClose,
   children,
 }: ModalSheetProps) {
+  const [portalHost, setPortalHost] = useState<HTMLElement | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const onCloseRef = useRef(onClose);
   const titleId = useId();
@@ -43,7 +44,11 @@ export function ModalSheet({
   }, [onClose]);
 
   useEffect(() => {
-    if (!open) return;
+    setPortalHost(document.body);
+  }, []);
+
+  useEffect(() => {
+    if (!open || !portalHost) return;
 
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -95,9 +100,9 @@ export function ModalSheet({
       document.body.style.overflow = previousOverflow;
       triggerRef.current?.focus();
     };
-  }, [open, triggerRef]);
+  }, [open, portalHost, triggerRef]);
 
-  if (!open) return null;
+  if (!open || !portalHost) return null;
 
   return createPortal(
     <div className="fixed inset-0 z-50">
@@ -125,6 +130,6 @@ export function ModalSheet({
         {children}
       </div>
     </div>,
-    document.body,
+    portalHost,
   );
 }

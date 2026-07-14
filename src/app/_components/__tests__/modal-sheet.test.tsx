@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useRef, useState } from "react";
+import { renderToString } from "react-dom/server";
 
 import { ModalSheet } from "~/app/_components/modal-sheet";
 
@@ -27,6 +28,34 @@ function ModalHarness({ initiallyOpen = false }: { initiallyOpen?: boolean }) {
     </>
   );
 }
+
+test("renders an initially open sheet safely during SSR", () => {
+  const documentDescriptor = Object.getOwnPropertyDescriptor(
+    globalThis,
+    "document",
+  );
+  Reflect.deleteProperty(globalThis, "document");
+
+  try {
+    expect(() =>
+      renderToString(
+        <ModalSheet
+          open
+          side="left"
+          title="Navigation"
+          triggerRef={{ current: null }}
+          onClose={() => undefined}
+        >
+          Navigation content
+        </ModalSheet>,
+      ),
+    ).not.toThrow();
+  } finally {
+    if (documentDescriptor) {
+      Object.defineProperty(globalThis, "document", documentDescriptor);
+    }
+  }
+});
 
 test("exposes modal dialog semantics and an accessible title", () => {
   render(<ModalHarness initiallyOpen />);
