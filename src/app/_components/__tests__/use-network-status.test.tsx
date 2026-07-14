@@ -1,5 +1,6 @@
 import { expect, spyOn, test } from "bun:test";
 import { act, renderHook } from "@testing-library/react";
+import { renderToString } from "react-dom/server";
 
 import { useNetworkStatus } from "~/app/_components/use-network-status";
 
@@ -9,6 +10,16 @@ function setNavigatorOnline(online: boolean) {
     value: online,
   });
 }
+
+function NetworkProbe() {
+  return <span>{useNetworkStatus() ? "online" : "offline"}</span>;
+}
+
+test("useNetworkStatus has a deterministic online server snapshot", () => {
+  setNavigatorOnline(false);
+
+  expect(renderToString(<NetworkProbe />)).toContain("online");
+});
 
 test("useNetworkStatus follows browser online and offline events", () => {
   setNavigatorOnline(false);

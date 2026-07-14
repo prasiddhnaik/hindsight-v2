@@ -25,6 +25,7 @@ export function ChatComposer({
 }: ChatComposerProps) {
   const helpId = useId();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const composingRef = useRef(false);
   const canSubmit = value.trim() !== "" && !offline;
 
   useLayoutEffect(() => {
@@ -56,11 +57,22 @@ export function ChatComposer({
             rows={1}
             value={value}
             onChange={(event) => onChange(event.target.value)}
+            onCompositionStart={() => {
+              composingRef.current = true;
+            }}
+            onCompositionEnd={() => {
+              composingRef.current = false;
+            }}
             onKeyDown={(event) => {
               if (
                 event.key !== "Enter" ||
                 event.shiftKey ||
-                event.nativeEvent.isComposing
+                event.ctrlKey ||
+                event.altKey ||
+                event.metaKey ||
+                composingRef.current ||
+                event.nativeEvent.isComposing ||
+                event.nativeEvent.keyCode === 229
               ) {
                 return;
               }

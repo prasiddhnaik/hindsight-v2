@@ -8,6 +8,7 @@ import { AlertIcon, RefreshIcon } from "~/app/_components/icons";
 interface ChatFeedbackProps {
   message: string | null;
   online: boolean;
+  rateLimitDeadline: number | null;
   onRetry?: () => void;
 }
 
@@ -16,30 +17,22 @@ const OFFLINE_MESSAGE = "You're offline. Reconnect to continue.";
 export function ChatFeedback({
   message,
   online,
+  rateLimitDeadline,
   onRetry,
 }: ChatFeedbackProps) {
   const kind = classifyChatError(message ?? "", online);
-  const [seconds, setSeconds] = useState(60);
+  const [, setTick] = useState(0);
 
   useEffect(() => {
-    if (kind !== "rate-limit") {
-      setSeconds(60);
-      return;
-    }
+    if (rateLimitDeadline === null) return;
 
-    setSeconds(60);
     const interval = window.setInterval(() => {
-      setSeconds((current) => {
-        if (current <= 1) {
-          window.clearInterval(interval);
-          return 0;
-        }
-        return current - 1;
-      });
+      setTick((current) => current + 1);
+      if (Date.now() >= rateLimitDeadline) window.clearInterval(interval);
     }, 1_000);
 
     return () => window.clearInterval(interval);
-  }, [kind]);
+  }, [rateLimitDeadline]);
 
   if (online && !message) return null;
 
@@ -47,18 +40,22 @@ export function ChatFeedback({
   const canRetry =
     onRetry !== undefined &&
     (kind === "provider" || kind === "unknown" || kind === "rate-limit");
+  const seconds =
+    rateLimitDeadline === null
+      ? 0
+      : Math.max(0, Math.ceil((rateLimitDeadline - Date.now()) / 1_000));
   const retryDisabled = kind === "rate-limit" && seconds > 0;
 
   return (
     <div
-      role="alert"
-      aria-live="assertive"
-      className="flex items-start gap-3 rounded-xl border border-danger/25 bg-danger/10 px-4 py-3 text-base text-danger"
+      className="rounded-xl border border-danger/25 bg-danger/10 px-4 py-3 text-base text-danger"
     >
-      <AlertIcon className="mt-1 size-4 shrink-0" />
-      <div className="min-w-0 flex-1">
+      <div role="alert" aria-live="assertive" className="flex items-start gap-3">
+        <AlertIcon className="mt-1 size-4 shrink-0" />
         <p>{visibleMessage}</p>
-        {canRetry && (
+      </div>
+      {canRetry && (
+        <div aria-live="off" className="pl-7">
           <button
             type="button"
             onClick={onRetry}
@@ -71,8 +68,8 @@ export function ChatFeedback({
             <RefreshIcon className="size-4" />
             {retryDisabled ? `Retry in ${seconds}s` : "Retry"}
           </button>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

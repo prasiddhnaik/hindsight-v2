@@ -7,6 +7,7 @@ import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 import { ChatComposer } from "~/app/_components/chat-composer";
+import { RATE_LIMIT_MESSAGE } from "~/app/_components/chat-error";
 import { ChatFeedback } from "~/app/_components/chat-feedback";
 import { CheckIcon, CopyIcon, WrenchIcon } from "~/app/_components/icons";
 import { useNetworkStatus } from "~/app/_components/use-network-status";
@@ -72,6 +73,10 @@ export function Chat({ conversationId, initialMessages }: ChatProps) {
   const [creationError, setCreationError] = useState<string | null>(null);
   const conversationIdRef = useRef(conversationId);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const rateLimitCooldownRef = useRef<{
+    startedAt: number;
+    deadline: number;
+  } | null>(null);
   const online = useNetworkStatus();
   const utils = api.useUtils();
   const createConversation = api.conversation.create.useMutation();
@@ -110,6 +115,25 @@ export function Chat({ conversationId, initialMessages }: ChatProps) {
   });
 
   const isBusy = status === "submitted" || status === "streaming";
+  const feedbackMessage =
+    creationError ??
+    (error
+      ? error.message ||
+        "Something went wrong while generating a response. Please try again."
+      : null);
+  if (
+    feedbackMessage === RATE_LIMIT_MESSAGE &&
+    rateLimitCooldownRef.current === null
+  ) {
+    const startedAt = Date.now();
+    rateLimitCooldownRef.current = {
+      startedAt,
+      deadline: startedAt + 60_000,
+    };
+  } else if (feedbackMessage !== RATE_LIMIT_MESSAGE) {
+    rateLimitCooldownRef.current = null;
+  }
+  const rateLimitDeadline = rateLimitCooldownRef.current?.deadline ?? null;
 
   // Keep the newest message in view while streaming.
   useEffect(() => {
@@ -222,14 +246,11 @@ export function Chat({ conversationId, initialMessages }: ChatProps) {
               </div>
             )}
 
-            {online && (creationError ?? error) && (
+            {online && feedbackMessage && (
               <ChatFeedback
-                message={
-                  creationError ??
-                  error?.message ??
-                  "Something went wrong while generating a response. Please try again."
-                }
+                message={feedbackMessage}
                 online={online}
+                rateLimitDeadline={rateLimitDeadline}
                 onRetry={
                   creationError
                     ? undefined

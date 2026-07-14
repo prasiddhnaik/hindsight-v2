@@ -71,6 +71,49 @@ test("IME composition Enter does not submit", () => {
   expect(onSubmit).not.toHaveBeenCalled();
 });
 
+test("active composition guards Enter when the browser omits isComposing", () => {
+  const onSubmit = mock(() => undefined);
+  render(<ComposerHarness initialValue="Composing" onSubmit={onSubmit} />);
+
+  const textarea = screen.getByRole("textbox", { name: "Message Hindsight" });
+  fireEvent.compositionStart(textarea);
+  fireEvent.keyDown(textarea, {
+    key: "Enter",
+    isComposing: false,
+    keyCode: 13,
+  });
+
+  expect(onSubmit).not.toHaveBeenCalled();
+});
+
+test("Safari-like candidate-confirmation Enter does not submit", () => {
+  const onSubmit = mock(() => undefined);
+  render(<ComposerHarness initialValue="Confirmed candidate" onSubmit={onSubmit} />);
+
+  const textarea = screen.getByRole("textbox", { name: "Message Hindsight" });
+  fireEvent.compositionStart(textarea);
+  fireEvent.compositionEnd(textarea);
+  fireEvent.keyDown(textarea, {
+    key: "Enter",
+    isComposing: false,
+    keyCode: 229,
+  });
+
+  expect(onSubmit).not.toHaveBeenCalled();
+});
+
+test("Ctrl, Alt, and Meta+Enter do not submit", () => {
+  const onSubmit = mock(() => undefined);
+  render(<ComposerHarness initialValue="Keep editing" onSubmit={onSubmit} />);
+
+  const textarea = screen.getByRole("textbox", { name: "Message Hindsight" });
+  fireEvent.keyDown(textarea, { key: "Enter", ctrlKey: true });
+  fireEvent.keyDown(textarea, { key: "Enter", altKey: true });
+  fireEvent.keyDown(textarea, { key: "Enter", metaKey: true });
+
+  expect(onSubmit).not.toHaveBeenCalled();
+});
+
 test("blank input cannot submit", async () => {
   const onSubmit = mock(() => undefined);
   const user = userEvent.setup();
