@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sub-agent Dossier Report Design</title>
+  <style>
+    body { max-width: 820px; margin: 40px auto; padding: 0 20px; color: #171717; font: 16px/1.6 system-ui, sans-serif; }
+    h1, h2 { line-height: 1.2; }
+    h2 { margin-top: 32px; }
+    code { background: #f1f1f1; padding: 2px 5px; border-radius: 4px; }
+    li + li { margin-top: 6px; }
+  </style>
+</head>
+<body>
+  <h1>Sub-agent dossier report design</h1>
+  <p><strong>Status:</strong> Approved in conversation on 14 July 2026.</p>
+
+  <h2>Purpose</h2>
+  <p>Replace the generic evaluation with a detailed, visually structured account of every sub-agent used during the Nocturne Studio redesign. The report must explain how each agent was assigned, how well it performed, where it failed, and how future assignments should improve.</p>
+
+  <h2>Information architecture</h2>
+  <ol>
+    <li>Editorial cover with current pause status and verified headline metrics.</li>
+    <li>Workflow map showing discovery, implementation, independent review, remediation, and root integration.</li>
+    <li>Agent roster separating Luna discovery work, Terra implementation work, Terra review work, and root-only responsibilities.</li>
+    <li>One dossier per agent or agent run, containing assignment, constraints, supplied context, outputs, measured results, strengths, failures, confidence limits, rating, and improvement measures.</li>
+    <li>Cross-agent visuals for performance, findings by task, productive versus wasted handoffs, and test-suite growth.</li>
+    <li>Recommended future operating model and unresolved redesign work.</li>
+  </ol>
+
+  <h2>Visual direction</h2>
+  <p>The report will use a restrained Nocturne editorial system rather than generic dashboard cards: warm dark paper, ivory type, amber evidence markers, serif display headings, compact monospaced metadata, dossier dividers, CSS-only charts, a workflow diagram, and print-safe styling. Visuals must explain relationships or comparisons rather than decorate empty space.</p>
+
+  <h2>Evidence rules</h2>
+  <ul>
+    <li>Use repository commits, task briefs, task reports, progress ledger, returned reviewer findings, and observed agent status.</li>
+    <li>Label missing or unavailable evidence instead of inventing an outcome.</li>
+    <li>Separate implementation success, reviewer effectiveness, responsiveness, and visual-verification limits.</li>
+    <li>Do not claim Tasks 5–8 are complete.</li>
+    <li>Record the stalled Task 5 reviewer as a failed handoff and the replacement reviewer as a successful recovery.</li>
+  </ul>
+
+  <h2>Dossier scoring</h2>
+  <p>Each dossier will score only dimensions supported by evidence: delivery, defect detection, reliability, responsiveness, and evidence quality. A composite score may be shown, but the underlying dimensions and confidence level must remain visible.</p>
+
+  <h2>Output</h2>
+  <p>Overwrite <code>reports/subagent-evaluation-report.html</code> with one self-contained responsive HTML file using inline CSS and no external dependencies. Preserve the existing Markdown evaluation as a separate source artifact.</p>
+</body>
+</html>
