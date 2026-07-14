@@ -6,13 +6,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
-import {
-  AlertIcon,
-  ArrowUpIcon,
-  CheckIcon,
-  CopyIcon,
-  WrenchIcon,
-} from "~/app/_components/icons";
+import { ChatComposer } from "~/app/_components/chat-composer";
+import { ChatFeedback } from "~/app/_components/chat-feedback";
+import { CheckIcon, CopyIcon, WrenchIcon } from "~/app/_components/icons";
+import { useNetworkStatus } from "~/app/_components/use-network-status";
 import { api } from "~/trpc/react";
 
 const SUGGESTIONS = [
@@ -24,6 +21,27 @@ const SUGGESTIONS = [
 interface ChatProps {
   conversationId: string | null;
   initialMessages: UIMessage[];
+}
+
+interface BuildChatRequestBodyOptions {
+  trigger: "submit-message" | "regenerate-message";
+  conversationId: string;
+  messages: UIMessage[];
+}
+
+export function buildChatRequestBody({
+  trigger,
+  conversationId,
+  messages,
+}: BuildChatRequestBodyOptions) {
+  if (trigger === "regenerate-message") {
+    return { action: "regenerate" as const, conversationId };
+  }
+
+  const message = [...messages]
+    .reverse()
+    .find(({ role }) => role === "user")!;
+  return { action: "send" as const, conversationId, message };
 }
 
 function CopyButton({ text }: { text: string }) {
@@ -51,8 +69,10 @@ function CopyButton({ text }: { text: string }) {
 
 export function Chat({ conversationId, initialMessages }: ChatProps) {
   const [input, setInput] = useState("");
+  const [creationError, setCreationError] = useState<string | null>(null);
   const conversationIdRef = useRef(conversationId);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const online = useNetworkStatus();
   const utils = api.useUtils();
   const createConversation = api.conversation.create.useMutation();
 
@@ -61,17 +81,26 @@ export function Chat({ conversationId, initialMessages }: ChatProps) {
     () =>
       new DefaultChatTransport({
         api: "/api/chat",
-        prepareSendMessagesRequest: ({ messages }) => ({
-          body: {
-            conversationId: conversationIdRef.current,
-            message: messages[messages.length - 1],
-          },
+        prepareSendMessagesRequest: ({ trigger, messages }) => ({
+          body: buildChatRequestBody({
+            trigger,
+            messages,
+            conversationId: conversationIdRef.current!,
+          }),
         }),
       }),
     [],
   );
 
-  const { messages, sendMessage, status, error } = useChat({
+  const {
+    messages,
+    sendMessage,
+    status,
+    error,
+    stop,
+    regenerate,
+    clearError,
+  } = useChat({
     transport,
     messages: initialMessages,
     onFinish: () => {
@@ -88,23 +117,30 @@ export function Chat({ conversationId, initialMessages }: ChatProps) {
   }, [messages, status]);
 
   async function send(text: string) {
-    if (!text || isBusy || createConversation.isPending) return;
+    const message = text.trim();
+    if (!message || !online || isBusy || createConversation.isPending) return;
+
+    setCreationError(null);
 
     if (!conversationIdRef.current) {
-      const { id } = await createConversation.mutateAsync();
-      conversationIdRef.current = id;
-      // Shallow URL swap — no remount, streaming continues undisturbed.
-      window.history.replaceState(null, "", `/chat/${id}`);
-      void utils.conversation.list.invalidate();
+      try {
+        const { id } = await createConversation.mutateAsync();
+        conversationIdRef.current = id;
+        // Shallow URL swap — no remount, streaming continues undisturbed.
+        window.history.replaceState(null, "", `/chat/${id}`);
+        void utils.conversation.list.invalidate();
+      } catch (cause) {
+        setCreationError(
+          cause instanceof Error
+            ? cause.message
+            : "Could not create the conversation. Please try again.",
+        );
+        return;
+      }
     }
 
+    void sendMessage({ text: message });
     setInput("");
-    void sendMessage({ text });
-  }
-
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    void send(input.trim());
   }
 
   return (
@@ -116,7 +152,7 @@ export function Chat({ conversationId, initialMessages }: ChatProps) {
               <h1 className="font-display text-[28px] leading-tight text-ink italic md:text-[32px]">
                 What can I help with?
               </h1>
-              <p className="mt-3 text-sm text-ink-muted">
+              <p className="mt-3 text-base text-ink-muted md:text-sm">
                 Ask anything — I remember what matters across conversations.
               </p>
               <div className="mt-8 flex flex-wrap justify-center gap-2">
@@ -124,7 +160,7 @@ export function Chat({ conversationId, initialMessages }: ChatProps) {
                   <button
                     key={s}
                     onClick={() => void send(s)}
-                    className="rounded-full border border-hairline px-3.5 py-1.5 text-[13px] text-ink-secondary transition-colors duration-150 hover:border-accent/40 hover:text-ink focus-visible:ring-2 focus-visible:ring-accent/60 focus-visible:outline-none"
+                    className="rounded-full border border-hairline px-3.5 py-2.5 text-base text-ink-secondary transition-colors duration-150 hover:border-accent/40 hover:text-ink focus-visible:ring-2 focus-visible:ring-accent/60 focus-visible:outline-none md:py-1.5 md:text-[13px]"
                   >
                     {s}
                   </button>
@@ -186,47 +222,40 @@ export function Chat({ conversationId, initialMessages }: ChatProps) {
               </div>
             )}
 
-            {error && (
-              <div
-                data-testid="chat-error"
-                className="flex items-start gap-2.5 rounded-xl border border-danger/25 bg-danger/10 px-4 py-3 text-[13.5px] text-danger"
-              >
-                <AlertIcon className="mt-0.5 size-4 shrink-0" />
-                <span>
-                  {error.message ||
-                    "Something went wrong. Please try again in a moment."}
-                </span>
-              </div>
+            {online && (creationError ?? error) && (
+              <ChatFeedback
+                message={
+                  creationError ??
+                  error?.message ??
+                  "Something went wrong while generating a response. Please try again."
+                }
+                online={online}
+                onRetry={
+                  creationError
+                    ? undefined
+                    : () => {
+                        clearError();
+                        void regenerate();
+                      }
+                }
+              />
             )}
           </div>
         </div>
       </div>
 
       <div className="px-4 pb-[max(1rem,env(safe-area-inset-bottom))] md:px-6">
-        <form
-          onSubmit={handleSubmit}
-          className="mx-auto w-full max-w-2xl rounded-2xl border border-hairline bg-surface transition-colors duration-200 focus-within:border-accent/50"
-        >
-          <div className="flex items-end gap-2 p-2 pl-4">
-            <input
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Message Hindsight…"
-              aria-label="Message Hindsight"
-              autoFocus
-              className="min-w-0 flex-1 bg-transparent py-2 text-base outline-none placeholder:text-ink-muted md:text-[15px]"
-            />
-            <button
-              type="submit"
-              disabled={isBusy || input.trim() === ""}
-              aria-label="Send message"
-              className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-accent text-bg transition-all duration-150 hover:brightness-110 active:scale-95 disabled:cursor-not-allowed disabled:bg-raised disabled:text-ink-muted md:size-9"
-            >
-              <ArrowUpIcon className="size-4" />
-            </button>
-          </div>
-        </form>
-        <p className="mx-auto mt-2 max-w-2xl text-center text-[11px] text-ink-muted">
+        <div className="mx-auto w-full max-w-2xl">
+          <ChatComposer
+            value={input}
+            busy={isBusy}
+            offline={!online}
+            onChange={setInput}
+            onSubmit={() => void send(input)}
+            onStop={() => void stop()}
+          />
+        </div>
+        <p className="mx-auto mt-2 max-w-2xl text-center text-base text-ink-muted md:text-[11px]">
           Gemma 4 · free tier — replies can be rate-limited at busy times
         </p>
       </div>
