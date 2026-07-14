@@ -71,7 +71,14 @@ export function SidebarView({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
+  const [deleteTriggerId, setDeleteTriggerId] = useState<string | null>(null);
+  const [attemptedDeleteId, setAttemptedDeleteId] = useState<string | null>(
+    null,
+  );
   const editInputRef = useRef<HTMLInputElement>(null);
+  const deleteTriggerRef = useRef<HTMLButtonElement>(null);
+  const confirmDeleteRef = useRef<HTMLButtonElement>(null);
+  const restoreDeleteFocusRef = useRef(false);
   const groupHeadingPrefix = useId();
   const groups = groupConversations(items, now);
 
@@ -81,16 +88,36 @@ export function SidebarView({
     editInputRef.current?.select();
   }, [editingId]);
 
+  useEffect(() => {
+    if (confirmingId) {
+      confirmDeleteRef.current?.focus();
+      return;
+    }
+
+    if (restoreDeleteFocusRef.current) {
+      deleteTriggerRef.current?.focus();
+      restoreDeleteFocusRef.current = false;
+    }
+  }, [confirmingId]);
+
   function beginRename(item: ConversationListItem) {
     setConfirmingId(null);
+    setAttemptedDeleteId(null);
     setDraft(item.title);
     setEditingId(item.id);
   }
 
   function commitRename(item: ConversationListItem) {
     const title = draft.trim();
+    const currentTitle = item.title.trim();
     setEditingId(null);
-    if (title && title !== item.title) onRename(item.id, title);
+    if (title && title !== currentTitle) onRename(item.id, title);
+  }
+
+  function cancelDelete() {
+    restoreDeleteFocusRef.current = true;
+    setAttemptedDeleteId(null);
+    setConfirmingId(null);
   }
 
   return (
@@ -228,8 +255,12 @@ export function SidebarView({
                               Delete this conversation?
                             </span>
                             <button
+                              ref={confirmDeleteRef}
                               type="button"
-                              onClick={() => onDelete(item.id)}
+                              onClick={() => {
+                                setAttemptedDeleteId(item.id);
+                                onDelete(item.id);
+                              }}
                               disabled={deletePending}
                               aria-label={`Confirm delete "${item.title}"`}
                               className={`flex size-11 shrink-0 items-center justify-center rounded-lg text-danger transition-colors duration-fast hover:bg-danger/15 disabled:cursor-not-allowed disabled:opacity-50 ${focusRing}`}
@@ -238,7 +269,7 @@ export function SidebarView({
                             </button>
                             <button
                               type="button"
-                              onClick={() => setConfirmingId(null)}
+                              onClick={cancelDelete}
                               disabled={deletePending}
                               aria-label="Cancel delete"
                               className={`flex size-11 shrink-0 items-center justify-center rounded-lg text-ink-muted transition-colors duration-fast hover:bg-surface hover:text-ink disabled:cursor-not-allowed disabled:opacity-50 ${focusRing}`}
@@ -251,7 +282,7 @@ export function SidebarView({
                               Deleting conversation
                             </p>
                           )}
-                          {deleteError && (
+                          {deleteError && attemptedDeleteId === item.id && (
                             <p role="alert" className="px-1 pb-2 text-xs text-danger">
                               {deleteError}
                             </p>
@@ -300,8 +331,16 @@ export function SidebarView({
                             <PencilIcon className="size-3.5" />
                           </button>
                           <button
+                            ref={
+                              item.id === deleteTriggerId
+                                ? deleteTriggerRef
+                                : undefined
+                            }
                             type="button"
-                            onClick={() => {
+                            onClick={(event) => {
+                              deleteTriggerRef.current = event.currentTarget;
+                              setDeleteTriggerId(item.id);
+                              setAttemptedDeleteId(null);
                               setEditingId(null);
                               setConfirmingId(item.id);
                             }}

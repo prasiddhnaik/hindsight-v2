@@ -150,6 +150,24 @@ test("saves a changed title with Enter but ignores empty and unchanged titles", 
   expect(onRename).toHaveBeenCalledTimes(1);
 });
 
+test("does not rename when draft and stored title differ only by whitespace", async () => {
+  const user = userEvent.setup();
+  const onRename = mock(() => undefined);
+  const spacedItems = [
+    { ...items[0]!, title: "  Today chat  " },
+  ];
+  render(<SidebarView {...props({ items: spacedItems, onRename })} />);
+
+  await user.click(
+    screen.getByRole("button", { name: /Rename.*Today chat/ }),
+  );
+  const input = screen.getByRole("textbox", { name: "Rename conversation" });
+  await user.clear(input);
+  await user.type(input, "Today chat{Enter}");
+
+  expect(onRename).not.toHaveBeenCalled();
+});
+
 test("supports Escape plus explicit Save and Cancel without losing the draft on blur", async () => {
   const user = userEvent.setup();
   const onRename = mock(() => undefined);
@@ -188,12 +206,31 @@ test("requires delete confirmation and supports cancellation", async () => {
   expect(onDelete).toHaveBeenCalledWith("today");
 });
 
+test("moves focus into delete confirmation and restores it on cancel", async () => {
+  const user = userEvent.setup();
+  render(<SidebarView {...props()} />);
+
+  await user.click(screen.getByRole("button", { name: 'Delete "Today chat"' }));
+  const confirm = screen.getByRole("button", {
+    name: 'Confirm delete "Today chat"',
+  });
+  expect(document.activeElement).toBe(confirm);
+
+  await user.click(screen.getByRole("button", { name: "Cancel delete" }));
+  expect(document.activeElement).toBe(
+    screen.getByRole("button", { name: 'Delete "Today chat"' }),
+  );
+});
+
 test("disables repeated delete confirmation and keeps failures visible", async () => {
   const user = userEvent.setup();
   const onDelete = mock(() => undefined);
   const view = render(<SidebarView {...props({ onDelete })} />);
 
   await user.click(screen.getByRole("button", { name: 'Delete "Today chat"' }));
+  await user.click(
+    screen.getByRole("button", { name: 'Confirm delete "Today chat"' }),
+  );
   view.rerender(
     <SidebarView
       {...props({
@@ -207,6 +244,7 @@ test("disables repeated delete confirmation and keeps failures visible", async (
     name: 'Confirm delete "Today chat"',
   });
   expect(confirm.hasAttribute("disabled")).toBe(true);
+  expect(onDelete).toHaveBeenCalledTimes(1);
   expect(within(confirm.closest("li")!).getByRole("status").textContent).toContain(
     "Deleting conversation",
   );
@@ -220,6 +258,29 @@ test("disables repeated delete confirmation and keeps failures visible", async (
     />,
   );
   expect(screen.getByRole("alert").textContent).toContain("Delete failed. Try again.");
+});
+
+test("does not show a stale delete error under a new confirmation row", async () => {
+  const user = userEvent.setup();
+  const onDelete = mock(() => undefined);
+  const view = render(<SidebarView {...props({ onDelete })} />);
+
+  await user.click(screen.getByRole("button", { name: 'Delete "Today chat"' }));
+  await user.click(
+    screen.getByRole("button", { name: 'Confirm delete "Today chat"' }),
+  );
+  view.rerender(
+    <SidebarView
+      {...props({ onDelete, deleteError: "Delete failed. Try again." })}
+    />,
+  );
+  expect(screen.getByRole("alert").textContent).toContain("Delete failed. Try again.");
+
+  await user.click(screen.getByRole("button", { name: "Cancel delete" }));
+  await user.click(
+    screen.getByRole("button", { name: 'Delete "Yesterday chat"' }),
+  );
+  expect(screen.queryByRole("alert")).toBeNull();
 });
 
 test("announces rename mutation progress and failure", () => {
