@@ -22,7 +22,7 @@ Last updated: 2026-07-10. Repo: https://github.com/prasiddhnaik/hindsight-v2
   `messages` — system block now flows via `streamText`'s `system` option.
   Route verified live end-to-end after the fix.
 
-## Live verification — 3/8 passed, 5 pending
+## Live verification — COMPLETE (8/8 passed, 2026-07-14)
 
 State file: `.verify-live-state.json` (repo root, gitignored). Runner:
 `bun scripts/verify-live.ts` — one attempt per check, resumable, exits 2
@@ -33,23 +33,15 @@ when the free endpoint is rate-limited, exits 1 loudly on real errors.
 | p5-repair (malformed-args repair) | PASS 2026-07-09 |
 | p4-extract (vegetarian fact stored) | PASS 2026-07-10 |
 | p4-recall (new conv respects memory, via real route) | PASS 2026-07-10 |
-| p4-inject (malicious memory doesn't hijack) | pending |
-| p5-chain (calculator + date, ≤5 steps) | pending |
-| p5-fail-tool (graceful recovery) | pending |
-| p3-compact (re-run after cleanup wiped earlier pass artifacts) | pending |
-| p3-answer (answers codename question from summary) | pending |
+| p4-inject (malicious memory doesn't hijack) | PASS 2026-07-14 |
+| p5-chain (calculator + date, 3 steps ≤5) | PASS 2026-07-14 |
+| p5-fail-tool (graceful recovery) | PASS 2026-07-14 |
+| p3-compact (30-token summary holds codename) | PASS 2026-07-14 |
+| p3-answer (answered "BLUEFALCON-42" from summary, full ~23K context) | PASS 2026-07-14 |
 
-**To resume**: start the dev server (`bun run dev`), then either run
-`bun scripts/verify-live.ts` manually during an uncongested moment, or
-re-arm the probe loop (probe a ~300-token request against the free model;
-on HTTP 200 run the script; sleep 300s otherwise). The upstream free pool
-("temporarily rate-limited upstream", both providers, also affects the
-sibling 31B free model) is the only blocker. Account-level unblock:
-attach a Google AI Studio key at openrouter.ai/settings/integrations
-(BYOK = own rate limits) or buy $10 credits (1,000 free requests/day).
-
-Note: `p3-compact`/`p3-answer` need the `synthetic-compaction` conversation;
-if missing, reseed with `bun scripts/verify-phase3.ts part2`.
+All test fixtures were auto-cleaned by the runner on completion. Full
+evidence strings live in `.verify-live-state.json`; per-check details in
+README's verification table.
 
 ## CURRENT FOCUS — design work
 
