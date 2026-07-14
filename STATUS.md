@@ -60,8 +60,10 @@ The visual foundation is in; remaining design tasks, roughly in value order:
    lists, code/pre, tables, blockquotes, links); verified against the stored
    recipe reply in headless Chrome. Code-block copy button still open
    (folded into item 3).
-2. **Replace `window.prompt`/`window.confirm`** (rename/delete) with themed
-   inline editing or a small dialog component.
+2. ~~**Replace `window.prompt`/`window.confirm`**~~ DONE 2026-07-10: inline
+   rename editor (Enter saves, Esc/blur cancels, accent ring) and two-tap
+   delete confirm (danger ring, auto-reverts after 4s). Verified headless:
+   rename persists to DB, delete removes row, no console errors.
 3. **Message actions**: copy button on assistant replies; maybe regenerate.
 4. **Tool-call presentation**: richer inline chip (args + result on expand)
    instead of name-only.

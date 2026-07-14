@@ -2,8 +2,16 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 
-import { GearIcon, PencilIcon, PlusIcon, TrashIcon } from "~/app/_components/icons";
+import {
+  CheckIcon,
+  CloseIcon,
+  GearIcon,
+  PencilIcon,
+  PlusIcon,
+  TrashIcon,
+} from "~/app/_components/icons";
 import { api } from "~/trpc/react";
 
 export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
@@ -12,6 +20,22 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const utils = api.useUtils();
 
   const { data: conversations } = api.conversation.list.useQuery();
+
+  // Inline rename state
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [draft, setDraft] = useState("");
+  const editInputRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (editingId) editInputRef.current?.select();
+  }, [editingId]);
+
+  // Two-tap delete confirm state (auto-reverts)
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
+  useEffect(() => {
+    if (!confirmingId) return;
+    const t = setTimeout(() => setConfirmingId(null), 4000);
+    return () => clearTimeout(t);
+  }, [confirmingId]);
 
   const deleteConversation = api.conversation.delete.useMutation({
     onSuccess: (_data, variables) => {
@@ -24,8 +48,9 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
     onSuccess: () => void utils.conversation.list.invalidate(),
   });
 
-  function handleRename(id: string, currentTitle: string) {
-    const title = window.prompt("Rename conversation", currentTitle)?.trim();
+  function commitRename(id: string, currentTitle: string) {
+    const title = draft.trim();
+    setEditingId(null);
     if (title && title !== currentTitle) {
       renameConversation.mutate({ id, title });
     }
@@ -68,6 +93,69 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
         )}
         {conversations?.map((c) => {
           const active = pathname === `/chat/${c.id}`;
+
+          if (editingId === c.id) {
+            return (
+              <div
+                key={c.id}
+                className="flex items-center rounded-lg bg-raised ring-1 ring-accent/40"
+              >
+                <input
+                  ref={editInputRef}
+                  value={draft}
+                  onChange={(e) => setDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") commitRename(c.id, c.title);
+                    if (e.key === "Escape") setEditingId(null);
+                  }}
+                  onBlur={() => setEditingId(null)}
+                  aria-label="Rename conversation"
+                  className="min-w-0 flex-1 bg-transparent px-3 py-2 text-[13.5px] outline-none"
+                />
+                <button
+                  onMouseDown={(e) => {
+                    e.preventDefault(); // beat the input's blur
+                    commitRename(c.id, c.title);
+                  }}
+                  aria-label="Save name"
+                  className="mr-1.5 flex size-6 shrink-0 items-center justify-center rounded-md text-accent hover:bg-surface"
+                >
+                  <CheckIcon className="size-3.5" />
+                </button>
+              </div>
+            );
+          }
+
+          if (confirmingId === c.id) {
+            return (
+              <div
+                key={c.id}
+                className="flex items-center gap-1 rounded-lg bg-raised px-3 py-1.5 ring-1 ring-danger/40"
+              >
+                <span className="min-w-0 flex-1 truncate text-[13px] text-danger">
+                  Delete?
+                </span>
+                <button
+                  onClick={() => {
+                    setConfirmingId(null);
+                    deleteConversation.mutate({ id: c.id });
+                  }}
+                  aria-label={`Confirm delete "${c.title}"`}
+                  className="flex size-6 shrink-0 items-center justify-center rounded-md text-danger transition-colors duration-150 hover:bg-danger/15"
+                >
+                  <CheckIcon className="size-3.5" />
+                </button>
+                <button
+                  onClick={() => setConfirmingId(null)}
+                  aria-label="Cancel delete"
+                  className="flex size-6 shrink-0 items-center justify-center rounded-md text-ink-muted transition-colors duration-150 hover:bg-surface hover:text-ink"
+                >
+                  <CloseIcon className="size-3.5" />
+                </button>
+              </div>
+            );
+          }
+
           return (
             <div
               key={c.id}
@@ -89,7 +177,10 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
               </Link>
               <div className="mr-1.5 hidden shrink-0 items-center gap-0.5 group-hover:flex">
                 <button
-                  onClick={() => handleRename(c.id, c.title)}
+                  onClick={() => {
+                    setDraft(c.title);
+                    setEditingId(c.id);
+                  }}
                   aria-label={`Rename "${c.title}"`}
                   title="Rename"
                   className="flex size-6 items-center justify-center rounded-md text-ink-muted transition-colors duration-150 hover:bg-raised hover:text-ink focus-visible:ring-2 focus-visible:ring-accent/60 focus-visible:outline-none"
@@ -97,10 +188,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
                   <PencilIcon className="size-3.5" />
                 </button>
                 <button
-                  onClick={() => {
-                    if (window.confirm(`Delete "${c.title}"?`))
-                      deleteConversation.mutate({ id: c.id });
-                  }}
+                  onClick={() => setConfirmingId(c.id)}
                   aria-label={`Delete "${c.title}"`}
                   title="Delete"
                   className="flex size-6 items-center justify-center rounded-md text-ink-muted transition-colors duration-150 hover:bg-raised hover:text-danger focus-visible:ring-2 focus-visible:ring-accent/60 focus-visible:outline-none"
