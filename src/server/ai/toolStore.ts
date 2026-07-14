@@ -1,7 +1,10 @@
 import type { StepResult, ToolSet } from "ai";
+import type { Prisma } from "../../../generated/prisma";
 
 import { db } from "~/server/db";
 import { countTokens } from "./tokens";
+
+type ToolStoreClient = Pick<Prisma.TransactionClient, "message">;
 
 /**
  * Persists tool calls and their results (§5): each step's calls land on an
@@ -11,6 +14,7 @@ import { countTokens } from "./tokens";
 export async function persistToolActivity(
   conversationId: string,
   steps: StepResult<ToolSet>[],
+  client: ToolStoreClient = db,
 ): Promise<void> {
   for (const step of steps) {
     if (step.toolCalls.length === 0) continue;
@@ -20,7 +24,7 @@ export async function persistToolActivity(
       toolName: call.toolName,
       input: call.input as object,
     }));
-    await db.message.create({
+    await client.message.create({
       data: {
         conversationId,
         role: "assistant",
@@ -32,7 +36,7 @@ export async function persistToolActivity(
 
     for (const result of step.toolResults) {
       const content = JSON.stringify(result.output);
-      await db.message.create({
+      await client.message.create({
         data: {
           conversationId,
           role: "tool",

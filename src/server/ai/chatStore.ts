@@ -1,7 +1,16 @@
 import type { UIMessage } from "ai";
+import type { Prisma } from "../../../generated/prisma";
 
 import { db } from "~/server/db";
 import { countTokens } from "./tokens";
+import { storedRowsToUIMessages } from "./uiMessages";
+
+export { storedRowsToUIMessages, type StoredMessageRow } from "./uiMessages";
+
+type ChatStoreClient = Pick<
+  Prisma.TransactionClient,
+  "conversation" | "message"
+>;
 
 /** Extracts plain text from a UIMessage's parts. */
 export function uiMessageText(message: UIMessage): string {
@@ -23,8 +32,9 @@ export async function getOwnedConversation(
 export async function persistUserMessage(
   conversationId: string,
   content: string,
+  client: ChatStoreClient = db,
 ): Promise<void> {
-  await db.message.create({
+  await client.message.create({
     data: {
       conversationId,
       role: "user",
@@ -37,8 +47,9 @@ export async function persistUserMessage(
 export async function persistAssistantMessage(
   conversationId: string,
   content: string,
+  client: ChatStoreClient = db,
 ): Promise<void> {
-  await db.message.create({
+  await client.message.create({
     data: {
       conversationId,
       role: "assistant",
@@ -47,7 +58,7 @@ export async function persistAssistantMessage(
     },
   });
   // Touch updatedAt so the sidebar orders by recent activity.
-  await db.conversation.update({
+  await client.conversation.update({
     where: { id: conversationId },
     data: { updatedAt: new Date() },
   });
@@ -73,12 +84,16 @@ export async function loadUIMessages(
   conversationId: string,
 ): Promise<UIMessage[]> {
   const rows = await db.message.findMany({
-    where: { conversationId, role: { in: ["user", "assistant"] } },
+    where: { conversationId, role: { in: ["user", "assistant", "tool"] } },
     orderBy: { createdAt: "asc" },
+    select: {
+      id: true,
+      role: true,
+      content: true,
+      toolCalls: true,
+      toolCallId: true,
+      createdAt: true,
+    },
   });
-  return rows.map((row) => ({
-    id: row.id,
-    role: row.role as "user" | "assistant",
-    parts: [{ type: "text", text: row.content }],
-  }));
+  return storedRowsToUIMessages(rows);
 }

@@ -6,6 +6,7 @@ import {
   type ContextPlan,
   type HistoryRow,
 } from "./planContext";
+import { rowsForGeneration, type ChatAction } from "./regeneration";
 import { SYSTEM_PROMPT } from "./systemPrompt";
 
 /**
@@ -17,6 +18,7 @@ import { SYSTEM_PROMPT } from "./systemPrompt";
 export async function assembleContext(
   conversationId: string,
   userId: string,
+  options: { action?: ChatAction } = {},
 ): Promise<Pick<ContextPlan, "system" | "messages">> {
   const conversation = await db.conversation.findFirst({
     where: { id: conversationId, userId },
@@ -29,10 +31,13 @@ export async function assembleContext(
     orderBy: { createdAt: "asc" },
     select: { id: true, role: true, content: true, tokenCount: true },
   });
-  const rows: HistoryRow[] = dbRows.map((row) => ({
-    ...row,
-    role: row.role as HistoryRow["role"],
-  }));
+  const rows = rowsForGeneration(
+    dbRows.map((row) => ({
+      ...row,
+      role: row.role as HistoryRow["role"],
+    })),
+    options.action ?? "send",
+  );
 
   // 10 most recent long-term memories; injected as untrusted data (§3.4).
   // Extraction that fills this table arrives in Phase 4.
