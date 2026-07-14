@@ -64,7 +64,9 @@ The visual foundation is in; remaining design tasks, roughly in value order:
    rename editor (Enter saves, Esc/blur cancels, accent ring) and two-tap
    delete confirm (danger ring, auto-reverts after 4s). Verified headless:
    rename persists to DB, delete removes row, no console errors.
-3. **Message actions**: copy button on assistant replies; maybe regenerate.
+3. ~~**Message actions: copy**~~ DONE 2026-07-10: hover-reveal copy button
+   on assistant replies with 1.5s check feedback; clipboard verified
+   headless. Regenerate + per-code-block copy still open.
 4. **Tool-call presentation**: richer inline chip (args + result on expand)
    instead of name-only.
 5. **Sidebar polish**: relative timestamps, today/yesterday grouping,

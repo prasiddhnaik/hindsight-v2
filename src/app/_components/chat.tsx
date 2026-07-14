@@ -9,6 +9,8 @@ import remarkGfm from "remark-gfm";
 import {
   AlertIcon,
   ArrowUpIcon,
+  CheckIcon,
+  CopyIcon,
   WrenchIcon,
 } from "~/app/_components/icons";
 import { api } from "~/trpc/react";
@@ -22,6 +24,29 @@ const SUGGESTIONS = [
 interface ChatProps {
   conversationId: string | null;
   initialMessages: UIMessage[];
+}
+
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button
+      onClick={() => {
+        void navigator.clipboard.writeText(text).then(() => {
+          setCopied(true);
+          setTimeout(() => setCopied(false), 1500);
+        });
+      }}
+      aria-label={copied ? "Copied" : "Copy message"}
+      title="Copy"
+      className="flex size-7 items-center justify-center rounded-md text-ink-muted opacity-0 transition-all duration-150 group-hover:opacity-100 hover:bg-surface hover:text-ink focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-accent/60 focus-visible:outline-none"
+    >
+      {copied ? (
+        <CheckIcon className="size-3.5 text-accent" />
+      ) : (
+        <CopyIcon className="size-3.5" />
+      )}
+    </button>
+  );
 }
 
 export function Chat({ conversationId, initialMessages }: ChatProps) {
@@ -130,7 +155,7 @@ export function Chat({ conversationId, initialMessages }: ChatProps) {
               }
 
               return (
-                <div key={message.id}>
+                <div key={message.id} className="group">
                   {tools.length > 0 && (
                     <p className="mb-2 inline-flex items-center gap-1.5 rounded-full border border-hairline px-2.5 py-1 text-[11.5px] text-ink-muted">
                       <WrenchIcon className="size-3" />
@@ -140,6 +165,11 @@ export function Chat({ conversationId, initialMessages }: ChatProps) {
                   <div className="markdown text-[15px] leading-7 text-ink">
                     <Markdown remarkPlugins={[remarkGfm]}>{text}</Markdown>
                   </div>
+                  {text && (
+                    <div className="mt-1.5 flex">
+                      <CopyButton text={text} />
+                    </div>
+                  )}
                 </div>
               );
             })}
