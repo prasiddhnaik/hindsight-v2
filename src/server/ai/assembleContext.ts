@@ -28,7 +28,7 @@ export async function assembleContext(
 
   const dbRows = await db.message.findMany({
     where: { conversationId },
-    orderBy: { createdAt: "asc" },
+    orderBy: [{ createdAt: "asc" }, { id: "asc" }],
     select: { id: true, role: true, content: true, tokenCount: true },
   });
   const rows = rowsForGeneration(

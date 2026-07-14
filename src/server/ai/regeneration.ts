@@ -1,6 +1,38 @@
+import type { FinishReason } from "ai";
+
 import type { HistoryRow } from "./planContext";
 
 export type ChatAction = "send" | "regenerate";
+export type TimestampSupplier = () => Date;
+
+export function monotonicTimestampSupplier(base: Date): TimestampSupplier {
+  let offsetMs = 0;
+  return () => new Date(base.getTime() + offsetMs++);
+}
+
+interface FinishedResponse {
+  finishReason: FinishReason;
+  text: string;
+  steps: ReadonlyArray<{ toolResults: readonly unknown[] }>;
+}
+
+export async function replaceIfEligible(
+  finish: FinishedResponse,
+  replace: () => Promise<void>,
+): Promise<boolean> {
+  const hasCompletedToolActivity = finish.steps.some(
+    (step) => step.toolResults.length > 0,
+  );
+  if (
+    finish.finishReason === "error" ||
+    (!finish.text.trim() && !hasCompletedToolActivity)
+  ) {
+    return false;
+  }
+
+  await replace();
+  return true;
+}
 
 export function rowsForGeneration(
   rows: HistoryRow[],

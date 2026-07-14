@@ -1,6 +1,6 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, mock, test } from "bun:test";
 
-import { rowsForGeneration } from "../regeneration";
+import { replaceIfEligible, rowsForGeneration } from "../regeneration";
 import type { HistoryRow } from "../planContext";
 
 function row(id: string, role: HistoryRow["role"]): HistoryRow {
@@ -43,5 +43,51 @@ describe("rowsForGeneration", () => {
     expect(() => rowsForGeneration(rows, "regenerate")).toThrow(
       "Cannot regenerate without a user message",
     );
+  });
+});
+
+describe("replaceIfEligible", () => {
+  test("does not invoke replacement for an error finish", async () => {
+    const replace = mock(async () => undefined);
+
+    const replaced = await replaceIfEligible(
+      {
+        finishReason: "error",
+        text: "partial replacement",
+        steps: [{ toolResults: [{ output: "partial result" }] }],
+      },
+      replace,
+    );
+
+    expect(replaced).toBe(false);
+    expect(replace).not.toHaveBeenCalled();
+  });
+
+  test("does not invoke replacement without text or completed tool activity", async () => {
+    const replace = mock(async () => undefined);
+
+    const replaced = await replaceIfEligible(
+      { finishReason: "stop", text: "   ", steps: [{ toolResults: [] }] },
+      replace,
+    );
+
+    expect(replaced).toBe(false);
+    expect(replace).not.toHaveBeenCalled();
+  });
+
+  test("invokes replacement for completed tool activity", async () => {
+    const replace = mock(async () => undefined);
+
+    const replaced = await replaceIfEligible(
+      {
+        finishReason: "tool-calls",
+        text: "",
+        steps: [{ toolResults: [{ output: "complete" }] }],
+      },
+      replace,
+    );
+
+    expect(replaced).toBe(true);
+    expect(replace).toHaveBeenCalledTimes(1);
   });
 });

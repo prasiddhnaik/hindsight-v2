@@ -2,6 +2,7 @@ import type { UIMessage } from "ai";
 import type { Prisma } from "../../../generated/prisma";
 
 import { db } from "~/server/db";
+import type { TimestampSupplier } from "./regeneration";
 import { countTokens } from "./tokens";
 import { storedRowsToUIMessages } from "./uiMessages";
 
@@ -48,6 +49,7 @@ export async function persistAssistantMessage(
   conversationId: string,
   content: string,
   client: ChatStoreClient = db,
+  timestamp?: TimestampSupplier,
 ): Promise<void> {
   await client.message.create({
     data: {
@@ -55,6 +57,7 @@ export async function persistAssistantMessage(
       role: "assistant",
       content,
       tokenCount: countTokens(content),
+      ...(timestamp ? { createdAt: timestamp() } : {}),
     },
   });
   // Touch updatedAt so the sidebar orders by recent activity.
@@ -85,7 +88,7 @@ export async function loadUIMessages(
 ): Promise<UIMessage[]> {
   const rows = await db.message.findMany({
     where: { conversationId, role: { in: ["user", "assistant", "tool"] } },
-    orderBy: { createdAt: "asc" },
+    orderBy: [{ createdAt: "asc" }, { id: "asc" }],
     select: {
       id: true,
       role: true,

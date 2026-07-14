@@ -2,6 +2,7 @@ import type { StepResult, ToolSet } from "ai";
 import type { Prisma } from "../../../generated/prisma";
 
 import { db } from "~/server/db";
+import type { TimestampSupplier } from "./regeneration";
 import { countTokens } from "./tokens";
 
 type ToolStoreClient = Pick<Prisma.TransactionClient, "message">;
@@ -15,6 +16,7 @@ export async function persistToolActivity(
   conversationId: string,
   steps: StepResult<ToolSet>[],
   client: ToolStoreClient = db,
+  timestamp?: TimestampSupplier,
 ): Promise<void> {
   for (const step of steps) {
     if (step.toolCalls.length === 0) continue;
@@ -31,6 +33,7 @@ export async function persistToolActivity(
         content: step.text || `[requested ${callsJson.map((c) => c.toolName).join(", ")}]`,
         toolCalls: callsJson,
         tokenCount: countTokens(JSON.stringify(callsJson) + step.text),
+        ...(timestamp ? { createdAt: timestamp() } : {}),
       },
     });
 
@@ -43,6 +46,7 @@ export async function persistToolActivity(
           content,
           toolCallId: result.toolCallId,
           tokenCount: countTokens(content),
+          ...(timestamp ? { createdAt: timestamp() } : {}),
         },
       });
     }
