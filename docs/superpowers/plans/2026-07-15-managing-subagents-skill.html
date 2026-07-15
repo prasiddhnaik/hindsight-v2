@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Managing Sub-agents Skill Implementation Plan</title><style>body{max-width:860px;margin:40px auto;padding:0 20px;font:15px/1.65 system-ui;color:#171717}h1,h2{line-height:1.2}h2{margin-top:30px}code{background:#f2f2f2;padding:2px 5px;border-radius:4px}li+li{margin-top:6px}</style></head>
+<body>
+  <h1>Managing sub-agents skill implementation plan</h1>
+  <p><strong>Execution:</strong> Inline by the root agent; no sub-agents.</p>
+  <p><strong>Goal:</strong> Install a concise, reusable personal Codex skill that applies the approved adaptive manager protocol.</p>
+  <p><strong>Architecture:</strong> One core skill under 100 lines, one progressively loaded contracts reference, and generated UI metadata. No scripts or assets.</p>
+
+  <h2>Constraints</h2>
+  <ul>
+    <li>Do not duplicate global <code>AGENTS.md</code> authorization or deletion rules.</li>
+    <li>Do not spawn validation agents until the user separately authorizes them.</li>
+    <li>Do not claim forward-test success.</li>
+    <li>Use the official initializer and validator.</li>
+  </ul>
+
+  <h2>Task 1: Scaffold</h2>
+  <ol>
+    <li>Run <code>init_skill.py managing-subagents --path /Users/prasiddhnaik/.codex/skills --resources references</code> with explicit interface values.</li>
+    <li>Confirm that <code>SKILL.md</code>, <code>references/</code>, and <code>agents/openai.yaml</code> exist.</li>
+  </ol>
+
+  <h2>Task 2: Write the protocol</h2>
+  <ol>
+    <li>Replace the scaffolded <code>SKILL.md</code> with the approved adaptive workflow.</li>
+    <li>Keep <code>SKILL.md</code> below 100 lines and approximately 500 words.</li>
+    <li>Add <code>references/contracts.md</code> with exact templates and cross-boundary review checks.</li>
+  </ol>
+
+  <h2>Task 3: Validate and hand off</h2>
+  <ol>
+    <li>Regenerate <code>agents/openai.yaml</code> from final skill content.</li>
+    <li>Run <code>quick_validate.py /Users/prasiddhnaik/.codex/skills/managing-subagents</code>; expect success.</li>
+    <li>Check line and word counts, placeholder absence, referenced-file existence, and YAML content.</li>
+    <li>Show the final <code>SKILL.md</code> to the user and disclose that forward-testing is pending authorization.</li>
+  </ol>
+</body></html>
